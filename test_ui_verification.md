@@ -1,0 +1,50 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e4]:
+      - button "Deploy" [ref=e12] [cursor=pointer]:
+        - generic [ref=e14]: Deploy
+      - button [ref=e16] [cursor=pointer]:
+        - img [ref=e17]
+  - generic [ref=e20]:
+    - generic [ref=e22]:
+      - button [ref=e24] [cursor=pointer]:
+        - img [ref=e25]
+      - list [ref=e29]:
+        - listitem [ref=e30]:
+          - link "app" [ref=e32] [cursor=pointer]:
+            - /url: http://localhost:8502/
+            - generic [ref=e33]: app
+        - listitem [ref=e34]:
+          - link "dashboard" [ref=e36] [cursor=pointer]:
+            - /url: http://localhost:8502/dashboard
+            - generic [ref=e37]: dashboard
+        - listitem [ref=e38]:
+          - link "settings" [ref=e40] [cursor=pointer]:
+            - /url: http://localhost:8502/settings
+            - generic [ref=e41]: settings
+      - generic [ref=e53]:
+        - paragraph [ref=e56]: 페이지 선택
+        - radiogroup "페이지 선택" [ref=e57] [cursor=pointer]:
+          - generic [ref=e58]:
+            - radio "대시보드" [checked]
+            - paragraph [ref=e63]: 대시보드
+          - generic [ref=e64]:
+            - radio "설정"
+            - paragraph [ref=e69]: 설정
+    - generic [ref=e72]:
+      - heading "💰 Financing - 투자 대시보드" [level=1] [ref=e78]:
+        - generic [ref=e79]:
+          - link:
+            - /url: "#faf375c6"
+            - img
+          - generic [ref=e80]: 💰 Financing - 투자 대시보드
+      - heading "투자 현황" [level=2] [ref=e86]:
+        - generic [ref=e87]:
+          - link:
+            - /url: "#3667e91d"
+            - img
+          - generic [ref=e88]: 투자 현황
+      - button "📥 Google Keep에서 데이터 가져오기" [ref=e91] [cursor=pointer]:
+        - paragraph [ref=e93]: 📥 Google Keep에서 데이터 가져오기
+      - alert [ref=e96]:
+        - paragraph [ref=e101]: 📊 데이터를 가져오면 대시보드가 표시됩니다.

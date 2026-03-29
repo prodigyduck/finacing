@@ -1,0 +1,38 @@
+- generic:
+  - generic:
+    - generic [ref=e1]:
+      - banner [ref=e2]:
+        - generic [ref=e7]:
+          - button "Deploy" [ref=e130] [cursor=pointer]:
+            - generic [ref=e132]: Deploy
+          - button [ref=e13] [cursor=pointer]:
+            - img [ref=e14]
+      - generic [ref=e4]:
+        - generic [ref=e18]:
+          - button [ref=e20] [cursor=pointer]:
+            - img [ref=e21]
+          - list [ref=e134]:
+            - listitem [ref=e135]:
+              - link "app" [ref=e137] [cursor=pointer]:
+                - /url: http://localhost:8501/
+                - generic [ref=e138]: app
+            - listitem [ref=e139]:
+              - link "dashboard" [ref=e141] [cursor=pointer]:
+                - /url: http://localhost:8501/dashboard
+                - generic [ref=e142]: dashboard
+            - listitem [ref=e143]:
+              - link "settings" [ref=e145] [cursor=pointer]:
+                - /url: http://localhost:8501/settings
+                - generic [ref=e146]: settings
+        - alert [ref=e148]:
+          - generic [ref=e150]:
+            - generic [ref=e151]: "ModuleNotFoundError: No module named 'src'"
+            - generic [ref=e152]: "Traceback:"
+            - code [ref=e154]:
+              - generic [ref=e155]: File "/Users/prodigyduck/git/financing/venv/lib/python3.9/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 535, in _run_script exec(code, module.__dict__)
+              - generic [ref=e156]: File "/Users/prodigyduck/git/financing/src/presentation/app.py", line 10, in <module> from src.presentation.pages.dashboard import show_dashboard
+    - dialog "dialog" [ref=e159]:
+      - generic [ref=e160]: Page not found
+      - generic [ref=e161]: The page that you have requested does not seem to exist. Running the app's main page.
+      - button "Close" [active] [ref=e162] [cursor=pointer]:
+        - img [ref=e163]

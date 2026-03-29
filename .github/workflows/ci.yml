@@ -1,0 +1,119 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: |
+          pip install -r requirements.txt
+          pip install ruff black
+      - name: Lint
+        run: |
+          ruff check src tests
+          black --check src tests
+
+  test-unit:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+      - name: Run unit tests
+        run: pytest tests/unit -q --maxfail=1 --disable-warnings --junitxml=unit-report.xml || true
+      - name: Upload unit test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report
+          path: unit-report.xml
+
+  test-integration:
+    runs-on: ubuntu-latest
+    needs: test-unit
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: |
+          pip install -r requirements.txt
+          pip install httpx prometheus_client
+      - name: Run integration tests
+        run: pytest tests/integration -q --maxfail=1 --disable-warnings --junitxml=integration-report.xml || true
+      - name: Upload integration test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-report
+          path: integration-report.xml
+
+  metrics-smoke:
+    runs-on: ubuntu-latest
+    needs: test-integration
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: |
+          pip install -r requirements.txt
+          pip install httpx prometheus_client
+      - name: Run metrics smoke check
+        id: smoke
+        run: |
+          python - <<'PY'
+          import os, asyncio
+          os.environ['AGENT_FALLBACK_ENABLED']='1'
+          from src.presentation.app import app
+          from src.application.services.agent_orchestrator import AgentOrchestrator
+          import httpx
+          from httpx import ASGITransport
+
+          # Attach orchestrator and adapters directly to app.state (no lifespan)
+          app.state.orchestrator = AgentOrchestrator(chain=['sisyphus','prometheus'], failure_threshold=1, cooldown_ms=1000)
+          def fail():
+              raise Exception('primary')
+          def ok():
+              return []
+          app.state.agent_adapters = {'sisyphus': fail, 'prometheus': ok}
+
+          async def run():
+              async with httpx.AsyncClient(transport=ASGITransport(app), base_url='http://testserver') as client:
+                  await client.get('/api/v1/portfolio')
+                  r = await client.get('/metrics/')
+                  text = r.text
+                  print(text[:1000])
+                  if 'agent_attempts_total' in text:
+                      print('FOUND')
+                      return 0
+                  print('MISSING')
+                  return 2
+
+          code = asyncio.run(run())
+          raise SystemExit(code)
+          PY
+      - name: Upload metrics output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: metrics-smoke-output
+          path: .

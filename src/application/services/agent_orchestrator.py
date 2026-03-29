@@ -5,6 +5,7 @@ from typing import Callable, Any, Dict, List, Optional, Union
 from prometheus_client import Counter, Histogram, REGISTRY
 from prometheus_client.core import CollectorRegistry
 
+
 # Create or reuse global metrics to avoid duplicate registration across tests
 def _get_or_create_counter(name, documentation, labelnames):
     try:
@@ -16,6 +17,7 @@ def _get_or_create_counter(name, documentation, labelnames):
             return coll
         # Fallback: create a new counter in a private registry
         return Counter(name, documentation, labelnames, registry=CollectorRegistry())
+
 
 def _get_or_create_histogram(name, documentation, labelnames):
     try:

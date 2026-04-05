@@ -8,7 +8,7 @@
       "port": 5173,
       "fallbacks": [5174, 5175],
       "env_var": "VITE_PORT",
-      "owner": {"team": "frontend", "contact": "frontend@example.com"},
+      "owner": {"team": "frontend", "contact": "frontend-team@financing.local"},
       "status": "active",
       "notes": "Vite default dev port"
     },
@@ -18,9 +18,120 @@
       "path": ".",
       "port": 8000,
       "env_var": "BACKEND_PORT",
-      "owner": {"team": "backend", "contact": "backend@example.com"},
+      "owner": {"team": "backend", "contact": "backend-team@financing.local"},
       "status": "active",
       "notes": "FastAPI dev server"
+    }
+    ,
+    {
+      "id": "vue-app-1",
+      "name": "Vue App 1",
+      "path": "projects/vue-app-1",
+      "port": 5200,
+      "fallbacks": [5201],
+      "env_var": "VITE_PORT",
+      "owner": {"team": "vue-team", "contact": "vue-team@financing.local"},
+      "status": "active",
+      "notes": "Project Vue app 1"
+    },
+    {
+      "id": "vue-app-2",
+      "name": "Vue App 2",
+      "path": "projects/vue-app-2",
+      "port": 5201,
+      "fallbacks": [5202],
+      "env_var": "VITE_PORT",
+      "owner": {"team": "vue-team", "contact": "vue-team@example.com"},
+      "status": "active",
+      "notes": "Project Vue app 2"
+    },
+    {
+      "id": "vue-app-3",
+      "name": "Vue App 3",
+      "path": "projects/vue-app-3",
+      "port": 5202,
+      "fallbacks": [5203],
+      "env_var": "VITE_PORT",
+      "owner": {"team": "vue-team", "contact": "vue-team@example.com"},
+      "status": "active",
+      "notes": "Project Vue app 3"
+    },
+    {
+      "id": "vue-app-4",
+      "name": "Vue App 4",
+      "path": "projects/vue-app-4",
+      "port": 5203,
+      "fallbacks": [5204],
+      "env_var": "VITE_PORT",
+      "owner": {"team": "vue-team", "contact": "vue-team@example.com"},
+      "status": "active",
+      "notes": "Project Vue app 4"
+    },
+    {
+      "id": "vue-app-5",
+      "name": "Vue App 5",
+      "path": "projects/vue-app-5",
+      "port": 5204,
+      "fallbacks": [5205],
+      "env_var": "VITE_PORT",
+      "owner": {"team": "vue-team", "contact": "vue-team@example.com"},
+      "status": "active",
+      "notes": "Project Vue app 5"
+    },
+    {
+      "id": "vue-app-6",
+      "name": "Vue App 6",
+      "path": "projects/vue-app-6",
+      "port": 5205,
+      "fallbacks": [5206],
+      "env_var": "VITE_PORT",
+      "owner": {"team": "vue-team", "contact": "vue-team@example.com"},
+      "status": "active",
+      "notes": "Project Vue app 6"
+    },
+    {
+      "id": "vue-app-7",
+      "name": "Vue App 7",
+      "path": "projects/vue-app-7",
+      "port": 5206,
+      "fallbacks": [5207],
+      "env_var": "VITE_PORT",
+      "owner": {"team": "vue-team", "contact": "vue-team@example.com"},
+      "status": "active",
+      "notes": "Project Vue app 7"
+    },
+    {
+      "id": "vue-app-8",
+      "name": "Vue App 8",
+      "path": "projects/vue-app-8",
+      "port": 5207,
+      "fallbacks": [5208],
+      "env_var": "VITE_PORT",
+      "owner": {"team": "vue-team", "contact": "vue-team@example.com"},
+      "status": "active",
+      "notes": "Project Vue app 8"
+    },
+    {
+      "id": "vue-app-9",
+      "name": "Vue App 9",
+      "path": "projects/vue-app-9",
+      "port": 5208,
+      "fallbacks": [5209],
+      "env_var": "VITE_PORT",
+      "owner": {"team": "vue-team", "contact": "vue-team@example.com"},
+      "status": "active",
+      "notes": "Project Vue app 9"
+    },
+    {
+      "id": "vue-app-10",
+      "name": "Vue App 10",
+      "path": "projects/vue-app-10",
+      "port": 5209,
+      "fallbacks": [],
+      "env_var": "VITE_PORT",
+      "owner": {"team": "vue-team", "contact": "vue-team@example.com"},
+      "status": "active",
+      "notes": "Project Vue app 10"
     }
   ]
 }

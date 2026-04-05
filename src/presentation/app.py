@@ -17,7 +17,6 @@ from src.application.services.agent_orchestrator import AgentOrchestrator
 from src.infrastructure.repositories.gkeep_repository import GKeepRepository
 from src.application.use_cases.fetch_investment_data import FetchInvestmentData
 from src.domain.entities.portfolio import Portfolio
-from src.infrastructure.port_monitor import port_monitor, PortInfo
 from src.presentation.validators import (
     validate_email,
     validate_label,
@@ -32,7 +31,7 @@ async def lifespan(app: FastAPI):
     """Manage application lifespan"""
     # Configure logging
     configure_logging()
-
+    
     # Load agent config and initialize orchestrator if enabled
     config = load_config()
     if config.enabled:
@@ -45,13 +44,20 @@ async def lifespan(app: FastAPI):
         app.state.orchestrator = orch
         app.state.agent_config = config
         app.state.repository = None
+        
+        # Register agent adapters (simulated agent repositories)
+        app.state.agent_adapters = {
+            'sisyphus': lambda label: [],
+            'prometheus': lambda label: [],
+            'atlas': lambda label: [],
+        }
     else:
         app.state.orchestrator = None
         app.state.agent_config = config
         app.state.repository = None
-
+    
     yield
-
+    
     # Shutdown
     app.state.repository = None
     app.state.orchestrator = None
@@ -115,35 +121,35 @@ async def get_portfolio(label: str = "투자"):
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Invalid label format"
         )
-
+    
     sanitized_label = sanitize_label(label)
-
+    
     try:
         # Get repository from app state
         repository: GKeepRepository = app.state.repository
-
+        
         if not repository:
             return {"error": "Repository not initialized. Call POST /api/v1/auth first"}
-
+        
         # Fetch investment data
         fetch_use_case = FetchInvestmentData(repository=repository, orchestrator=app.state.orchestrator)
-
+        
         # Build agent callables mapping if orchestrator present and adapters registered
         if getattr(app.state, "orchestrator", None) and getattr(app.state, "agent_adapters", None):
             adapters = app.state.agent_adapters
-
+            
             # Pass mapping through orchestrator by calling execute_with_fallback with mapping
             assets = app.state.orchestrator.execute_with_fallback(adapters)
         else:
             assets = fetch_use_case.execute(label=sanitized_label)
-
+        
         # Create portfolio
         portfolio = Portfolio(assets=assets)
-
+        
         # Calculate metrics
         total_value = portfolio.total_value()
         allocation = portfolio.allocation_by_type()
-
+        
         return {
             "total_value": {
                 "amount": float(total_value.amount),
@@ -171,7 +177,7 @@ async def get_portfolio(label: str = "투자"):
             ],
             "asset_count": len(portfolio.assets),
         }
-
+    
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -197,22 +203,22 @@ async def authenticate(email: str, password: str):
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Invalid email format"
         )
-
+    
     if not validate_password(password):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Password is required"
         )
-
+    
     try:
         # Create repository with credentials
         repository = GKeepRepository(email=email, password=password)
-
+        
         # Store repository in app state
         app.state.repository = repository
-
+        
         return {"status": "authenticated", "email": email}
-
+    
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -222,10 +228,10 @@ async def authenticate(email: str, password: str):
 
 if __name__ == "__main__":
     import uvicorn
-
+    
     uvicorn.run(
-        "src.presentation.app:app",
+        app,
         host="0.0.0.0",
         port=8000,
-        reload=True,
+        reload=False,
     )

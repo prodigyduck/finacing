@@ -15,6 +15,7 @@ from src.config.agent_config import load_config
 from src.application.services.agent_orchestrator import AgentOrchestrator
 
 from src.infrastructure.repositories.gkeep_repository import GKeepRepository
+from src.infrastructure.repositories.repository_factory import RepositoryFactory
 from src.application.use_cases.fetch_investment_data import FetchInvestmentData
 from src.domain.entities.portfolio import Portfolio
 from src.presentation.validators import (
@@ -44,8 +45,10 @@ async def lifespan(app: FastAPI):
         app.state.orchestrator = orch
         app.state.agent_config = config
         app.state.repository = None
-        
-        # Register agent adapters (simulated agent repositories)
+        app.state.repository_factory = None
+
+        # Register agent adapters (will be replaced after authentication)
+        # Start with simulated adapters that will be replaced with real ones
         app.state.agent_adapters = {
             'sisyphus': lambda label: [],
             'prometheus': lambda label: [],
@@ -55,6 +58,7 @@ async def lifespan(app: FastAPI):
         app.state.orchestrator = None
         app.state.agent_config = config
         app.state.repository = None
+        app.state.repository_factory = None
     
     yield
     
@@ -213,10 +217,15 @@ async def authenticate(email: str, password: str):
     try:
         # Create repository with credentials
         repository = GKeepRepository(email=email, password=password)
-        
+
         # Store repository in app state
         app.state.repository = repository
-        
+
+        # Create repository factory and real agent adapters
+        factory = RepositoryFactory(repository)
+        app.state.repository_factory = factory
+        app.state.agent_adapters = factory.create_all_adapters()
+
         return {"status": "authenticated", "email": email}
     
     except Exception as e:

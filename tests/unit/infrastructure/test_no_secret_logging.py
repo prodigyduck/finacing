@@ -4,6 +4,8 @@ import io
 
 def test_no_secrets_in_logs():
     logger = logging.getLogger("financing.test")
+    # ensure INFO-level logs are emitted for the test
+    logger.setLevel(logging.INFO)
     stream = io.StringIO()
     handler = logging.StreamHandler(stream)
     logger.addHandler(handler)

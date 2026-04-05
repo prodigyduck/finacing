@@ -34,11 +34,15 @@ ENV/
 
 # Environment variables
 .env
+.env.local
+.env.*.local
 
 # Google Keep token
 *.json
 !pyproject.toml
 !requirements.txt
+!ports.json
+!ports.schema.json
 
 # Testing
 .pytest_cache/

@@ -73,6 +73,8 @@ python -m src.presentation.app
 
 Backend will run on http://localhost:8000
 
+**Note**: See [PORTS.md](PORTS.md) for port assignment and how to generate local \`.env.local\` files with fallback support.
+
 API Documentation: http://localhost:8000/docs
 
 ### Frontend Setup
@@ -211,6 +213,8 @@ Authenticate with Google Keep
 
 - [AGENTS.md](AGENTS.md) - AI agents and their roles
 - [ARCHITECTURE.md](ARCHITECTURE.md) - Clean Architecture layers and patterns
+- [PORTS.md](PORTS.md) - Port management registry and usage
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines and development workflow
 - [docs/DESIGN.md](docs/DESIGN.md) - Design principles and coding standards
 - [docs/FRONTEND.md](docs/FRONTEND.md) - Vue.js frontend architecture
 - [docs/SECURITY.md](docs/SECURITY.md) - Security considerations

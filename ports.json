@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "services": [
+    {
+      "id": "frontend",
+      "name": "Frontend (Vite)",
+      "path": "frontend",
+      "port": 5173,
+      "fallbacks": [5174, 5175],
+      "env_var": "VITE_PORT",
+      "owner": {"team": "frontend", "contact": "frontend@example.com"},
+      "status": "active",
+      "notes": "Vite default dev port"
+    },
+    {
+      "id": "backend",
+      "name": "Backend (FastAPI)",
+      "path": ".",
+      "port": 8000,
+      "env_var": "BACKEND_PORT",
+      "owner": {"team": "backend", "contact": "backend@example.com"},
+      "status": "active",
+      "notes": "FastAPI dev server"
+    }
+  ]
+}

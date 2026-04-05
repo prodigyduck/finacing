@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Ports registry schema",
+  "type": "object",
+  "required": ["schema_version", "services"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "services": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "path", "port", "env_var", "owner", "status"],
+        "properties": {
+          "id": {"type": "string"},
+          "name": {"type": "string"},
+          "path": {"type": "string"},
+          "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+          "fallbacks": {"type": "array", "items": {"type": "integer", "minimum": 1, "maximum": 65535}},
+          "env_var": {"type": "string"},
+          "protocol": {"type": "string"},
+          "host": {"type": "string"},
+          "owner": {"type": "object", "required": ["team"], "properties": {"team": {"type": "string"}, "contact": {"type": "string"}}},
+          "status": {"type": "string", "enum": ["active", "reserved", "retired"]},
+          "assigned_at": {"type": "string", "format": "date-time"},
+          "notes": {"type": "string"}
+        }
+      }
+    }
+  }
+}

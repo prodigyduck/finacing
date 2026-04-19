@@ -1,14 +1,14 @@
 [project]
 name = "financing"
 version = "0.2.0"
-description = "Investment dashboard using data from Google Keep"
+description = "Investment dashboard using data from Obsidian"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.109.0",
     "uvicorn[standard]>=0.27.0",
     "python-dotenv>=1.0.0",
     "requests>=2.31.0",
-    "gkeepapi>=0.13.10",
+
     "pandas>=2.2.0",
     "numpy>=1.26.3",
     "pydantic>=2.0.0",

@@ -1,259 +1,220 @@
 <template>
   <div class="dashboard">
-    <header>
-      <h1>💰 Financing - Investment Dashboard</h1>
-      <nav>
-        <router-link to="/" active-class="active">Dashboard</router-link>
-        <router-link to="/settings" active-class="active">Settings</router-link>
-      </nav>
-    </header>
-
-    <main>
-      <div v-if="authStore.needsAuth" class="auth-warning">
-        <p>⚠️ Please configure Google Keep authentication in Settings page.</p>
-        <router-link to="/settings">Go to Settings</router-link>
+    <div class="top-bar">
+      <div>
+        <h1 class="page-title">Portfolio</h1>
+        <p class="page-subtitle">Investment value history from Obsidian</p>
       </div>
-
-      <div v-else>
-        <button @click="fetchData" :disabled="loading">
-          {{ loading ? 'Loading...' : '📥 Fetch Data from Google Keep' }}
+      <div class="top-actions">
+        <span class="last-updated" v-if="lastUpdated">Updated {{ lastUpdated }}</span>
+        <button class="btn-refresh" @click="fetchData" :disabled="historyStore.loading">
+          <svg v-if="historyStore.loading" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+          </svg>
+          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          {{ historyStore.loading ? 'Fetching...' : 'Refresh' }}
         </button>
+      </div>
+    </div>
 
-        <div v-if="portfolioStore.portfolio" class="portfolio-content">
-          <section class="overview">
-            <div class="metric">
-              <h2>Total Assets</h2>
-              <p class="value">
-                {{ formatCurrency(portfolioStore.portfolio.total_value) }}
-              </p>
-            </div>
-            <div class="metric">
-              <h2>Asset Count</h2>
-              <p class="value">{{ portfolioStore.portfolio.asset_count }}</p>
-            </div>
-          </section>
-
-          <section class="charts">
-            <div class="chart-container">
-              <h2>Asset Type Distribution</h2>
-              <PieChart :data="allocationData" />
-            </div>
-            <div class="chart-container">
-              <h2>Asset Allocation</h2>
-              <BarChart :data="assetsData" />
-            </div>
-          </section>
-
-          <section class="asset-table">
-            <h2>Asset Details</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Type</th>
-                  <th>Quantity</th>
-                  <th>Unit Price</th>
-                  <th>Total Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="asset in portfolioStore.portfolio.assets" :key="asset.name">
-                  <td>{{ asset.name }}</td>
-                  <td>{{ asset.type }}</td>
-                  <td>{{ formatNumber(asset.quantity) }}</td>
-                  <td>{{ formatCurrency(asset.unit_price) }}</td>
-                  <td>{{ formatCurrency(asset.total_value) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </section>
+    <template v-if="historyStore.history && historyStore.history.record_count > 0">
+      <div class="metrics-row">
+        <div class="metric-card">
+          <span class="metric-label">Latest Value</span>
+          <span class="metric-value">{{ historyStore.history.latest?.amount.toFixed(2) }}억</span>
         </div>
-
-        <div v-else-if="!loading" class="no-data">
-          <p>📊 Dashboard will be displayed after fetching data.</p>
+        <div class="metric-card">
+          <span class="metric-label">Change</span>
+          <span class="metric-value" :class="changeClass">{{ formatChange(historyStore.history.total_change) }}</span>
         </div>
-
-        <div v-if="error" class="error">
-          <p>❌ {{ error }}</p>
+        <div class="metric-card">
+          <span class="metric-label">Return Rate</span>
+          <span class="metric-value" :class="changeClass">{{ formatRate(historyStore.history.return_rate) }}</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Records</span>
+          <span class="metric-value">{{ historyStore.history.record_count }}</span>
         </div>
       </div>
-    </main>
+
+      <div class="card chart-card">
+        <div class="card-header">
+          <h3>Portfolio Value Over Time</h3>
+        </div>
+        <div class="chart-body">
+          <LineChart :data="lineData" :projections="projectionsData" />
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Daily Records</h3>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th class="right">Value (억)</th>
+                <th class="right">Change</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(record, idx) in historyStore.history.records" :key="record.date">
+                <td>{{ formatDate(record.date) }}</td>
+                <td class="right">{{ record.amount.toFixed(2) }}</td>
+                <td class="right" :class="dailyChangeClass(idx)">{{ formatDailyChange(idx) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </template>
+
+    <div v-if="!historyStore.loading && (!historyStore.history || historyStore.history.record_count === 0)" class="card empty-state">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="1.5">
+        <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+      </svg>
+      <h3>No data yet</h3>
+      <p>Click Refresh to fetch your investment data.</p>
+    </div>
+
+    <div v-if="historyStore.error" class="card error-state">
+      <p>{{ historyStore.error }}</p>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore, usePortfolioStore } from '@/stores'
-import PieChart from '@/components/PieChart.vue'
-import BarChart from '@/components/BarChart.vue'
+import { ref, computed } from 'vue'
+import { useHistoryStore } from '@/stores'
+import LineChart from '@/components/LineChart.vue'
 
-const router = useRouter()
-const authStore = useAuthStore()
-const portfolioStore = usePortfolioStore()
+const historyStore = useHistoryStore()
+const lastUpdated = ref<string | null>(null)
 
-const loading = computed(() => portfolioStore.loading)
-const error = computed(() => portfolioStore.error)
-
-const allocationData = computed(() => {
-  if (!portfolioStore.portfolio) return []
-  return Object.entries(portfolioStore.portfolio.allocation).map(([type, ratio]) => ({
-    type,
-    ratio
-  }))
+const changeClass = computed(() => {
+  const change = historyStore.history?.total_change
+  if (change == null) return ''
+  return change > 0 ? 'positive' : change < 0 ? 'negative' : ''
 })
 
-const assetsData = computed(() => {
-  if (!portfolioStore.portfolio) return []
-  return portfolioStore.portfolio.assets.map(asset => ({
-    name: asset.name,
-    ratio: (asset.total_value.amount / portfolioStore.portfolio.total_value.amount) * 100
-  }))
+const lineData = computed(() => {
+  if (!historyStore.history?.records) return []
+  return historyStore.history.records.map(r => ({ date: r.date, value: r.amount }))
 })
 
-function formatCurrency(value: { amount: number; currency: string }): string {
-  return `${value.amount.toLocaleString()} ${value.currency}`
+const projectionsData = computed(() => {
+  return historyStore.history?.projections ?? []
+})
+
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr)
+  return `${d.getMonth() + 1}/${d.getDate()}`
 }
 
-function formatNumber(num: number): string {
-  return num.toLocaleString()
+function formatChange(change: number | null | undefined): string {
+  if (change == null) return '-'
+  const sign = change > 0 ? '+' : ''
+  return `${sign}${change.toFixed(2)}억`
+}
+
+function formatRate(rate: number | null | undefined): string {
+  if (rate == null) return '-'
+  const sign = rate > 0 ? '+' : ''
+  return `${sign}${rate.toFixed(2)}%`
+}
+
+function dailyChangeClass(idx: number): string {
+  if (idx === 0) return ''
+  const records = historyStore.history?.records
+  if (!records) return ''
+  const diff = records[idx].amount - records[idx - 1].amount
+  return diff > 0 ? 'positive' : diff < 0 ? 'negative' : ''
+}
+
+function formatDailyChange(idx: number): string {
+  if (idx === 0) return '-'
+  const records = historyStore.history?.records
+  if (!records) return '-'
+  const diff = records[idx].amount - records[idx - 1].amount
+  const sign = diff > 0 ? '+' : ''
+  return `${sign}${diff.toFixed(2)}`
 }
 
 async function fetchData() {
-  await portfolioStore.fetchPortfolio()
+  await historyStore.fetchHistory()
+  lastUpdated.value = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
 }
 </script>
 
 <style scoped>
-.dashboard {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+.dashboard { max-width: 1100px; margin: 0 auto; }
+
+.top-bar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
+.page-title { font-size: 28px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; }
+.page-subtitle { font-size: 14px; color: var(--text-tertiary); margin-top: 4px; }
+.top-actions { display: flex; align-items: center; gap: 12px; }
+.last-updated { font-size: 13px; color: var(--text-tertiary); }
+
+.btn-refresh {
+  display: flex; align-items: center; gap: 6px; padding: 8px 16px;
+  background: var(--accent); color: white; border: none; border-radius: 8px;
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.15s;
+}
+.btn-refresh:hover { opacity: 0.85; }
+.btn-refresh:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.card {
+  background: var(--bg-card); border-radius: var(--radius);
+  box-shadow: var(--shadow-sm); border: 1px solid var(--border);
 }
 
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-}
+.metrics-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
 
-nav {
-  display: flex;
-  gap: 20px;
+.metric-card {
+  background: var(--bg-card); border-radius: var(--radius); padding: 20px 24px;
+  box-shadow: var(--shadow-sm); border: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 6px;
 }
+.metric-label { font-size: 13px; font-weight: 500; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px; }
+.metric-value { font-size: 28px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; }
+.metric-value.positive { color: var(--green); }
+.metric-value.negative { color: var(--red); }
 
-nav a {
-  text-decoration: none;
-  color: #333;
-  padding: 8px 16px;
-  border-radius: 4px;
+.chart-card { padding: 20px; margin-bottom: 24px; }
+.chart-card .card-header { margin-bottom: 16px; }
+.card-header h3 { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+.chart-body { height: 320px; }
+
+.table-wrapper { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  padding: 12px 16px; font-size: 12px; font-weight: 600; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 0.5px; text-align: left;
+  border-bottom: 1px solid var(--border);
 }
+thead th.right { text-align: right; }
+tbody td { padding: 14px 16px; font-size: 14px; border-bottom: 1px solid var(--border); }
+.right { text-align: right; }
+.positive { color: var(--green); font-weight: 600; }
+.negative { color: var(--red); font-weight: 600; }
 
-nav a.active {
-  background-color: #42b883;
-  color: white;
+.empty-state, .error-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 60px 20px; gap: 12px;
 }
+.empty-state h3 { font-size: 17px; font-weight: 600; color: var(--text-secondary); }
+.empty-state p { font-size: 14px; color: var(--text-tertiary); }
+.error-state { color: var(--red); font-size: 14px; }
 
-.auth-warning {
-  background-color: #fff3cd;
-  border: 1px solid #ffeeba;
-  padding: 20px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-}
-
-.overview {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
-}
-
-.metric {
-  background-color: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.metric h2 {
-  margin: 0 0 10px;
-  font-size: 1.2rem;
-  color: #666;
-}
-
-.metric .value {
-  font-size: 2rem;
-  font-weight: bold;
-  color: #42b883;
-}
-
-.charts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
-}
-
-.chart-container {
-  background-color: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.chart-container h2 {
-  margin: 0 0 20px;
-  font-size: 1.2rem;
-  color: #333;
-}
-
-button {
-  background-color: #42b883;
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 4px;
-  font-size: 1rem;
-  cursor: pointer;
-  margin-bottom: 20px;
-}
-
-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-.asset-table table {
-  width: 100%;
-  border-collapse: collapse;
-  background-color: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.asset-table th,
-.asset-table td {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid #ddd;
-}
-
-.asset-table th {
-  background-color: #f5f5f5;
-  font-weight: bold;
-}
-
-.no-data,
-.error {
-  text-align: center;
-  padding: 40px;
-  color: #666;
-}
-
-.error {
-  color: #dc3545;
+@media (max-width: 768px) {
+  .metrics-row { grid-template-columns: repeat(2, 1fr); }
 }
 </style>

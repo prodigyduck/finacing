@@ -62,6 +62,9 @@ class AgentOrchestrator:
             "agent_latency_seconds", "Latency of agent calls", ["agent"]
         )
 
+        # Expose a convenience mapping for tests to read current state
+        self._state_snapshot = {}
+
     def _is_circuit_open(self, agent: str) -> bool:
         until = self._circuit_open_until.get(agent, 0)
         return time.time() < until
@@ -75,6 +78,13 @@ class AgentOrchestrator:
 
     def _record_success(self, agent: str):
         self._failures[agent] = 0
+
+    def snapshot(self) -> Dict[str, Any]:
+        """Return a small snapshot of internal state for tests/observability."""
+        return {
+            "failures": dict(self._failures),
+            "circuit_open_until": dict(self._circuit_open_until),
+        }
 
     def execute_with_fallback(self, callables: Union[Dict[str, Callable[[], Any]], Callable[[], Any]]) -> Any:
         """

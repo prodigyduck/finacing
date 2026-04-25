@@ -41,12 +41,8 @@ ENV/
 .env.*.local
 config.yaml
 
-# Google Keep token
-*.json
-!pyproject.toml
-!requirements.txt
-!ports.json
-!ports.schema.json
+# Node
+node_modules/
 
 # Testing
 .pytest_cache/
@@ -55,10 +51,15 @@ htmlcov/
 *.cover
 .hypothesis/
 
-# Streamlit
-.streamlit/
-
 # Type checking
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# Logs & screenshots
+*.log
+*.png
+.sisyphus/
+
+# Sisyphus CI
+GLM

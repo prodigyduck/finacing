@@ -9,6 +9,15 @@
       <div class="d-flex align-center ga-3">
         <span v-if="lastUpdated" class="text-caption text-medium-emphasis">Updated {{ lastUpdated }}</span>
         <v-btn
+          variant="outlined"
+          size="small"
+          :loading="historyStore.syncing"
+          @click="syncAndFetch"
+        >
+          <v-icon start>mdi-source-branch-sync</v-icon>
+          Git Pull
+        </v-btn>
+        <v-btn
           color="primary"
           variant="flat"
           size="small"
@@ -151,6 +160,11 @@ function formatDailyChange(idx: number): string {
 
 async function fetchData() {
   await historyStore.fetchHistory()
+  lastUpdated.value = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+}
+
+async function syncAndFetch() {
+  await historyStore.syncAndFetch()
   lastUpdated.value = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
 }
 </script>

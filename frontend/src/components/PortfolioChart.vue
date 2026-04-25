@@ -70,7 +70,10 @@ function render() {
       data,
       smooth: false,
       symbol: 'circle',
-      symbolSize: (_value: number, params: { dataIndex: number }) => params.dataIndex === projIdx ? 14 : 8,
+      symbolSize: (value: number | null, params: { dataIndex: number }) => {
+        if (value == null) return 0
+        return params.dataIndex === projIdx ? 14 : 0
+      },
       lineStyle: {
         color: TREND_COLORS[proj.months] || '#8E8E93',
         width: 3,
@@ -84,7 +87,10 @@ function render() {
       label: {
         show: true,
         position: 'right',
-        formatter: `${proj.amount}`,
+        formatter: (params: { dataIndex: number; value: number | null }) => {
+          if (params.value == null || params.dataIndex !== projIdx) return ''
+          return `${proj.amount}`
+        },
         color: TREND_COLORS[proj.months] || '#8E8E93',
         fontWeight: 'bold' as const,
         fontSize: 12,
@@ -116,7 +122,7 @@ function render() {
       itemHeight: 3,
       textStyle: { fontFamily: 'Inter', fontSize: 11, color: '#6e6e73' },
     },
-    grid: { left: 50, right: 20, top: 40, bottom: 30 },
+    grid: { left: 50, right: 60, top: 40, bottom: 30 },
     xAxis: {
       type: 'category',
       data: allLabels,

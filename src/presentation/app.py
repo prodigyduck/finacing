@@ -47,6 +47,18 @@ async def health_check():
     return {"status": "healthy", "timestamp": datetime.datetime.now().isoformat()}
 
 
+@app.post("/api/v1/sync")
+async def sync_vault():
+    try:
+        result = parser.pull()
+        return {"status": "synced", "detail": result}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Git pull failed: {str(e)}",
+        )
+
+
 @app.get("/api/v1/history")
 async def get_history(year: Optional[int] = None):
     try:

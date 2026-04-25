@@ -38,3 +38,8 @@ export async function fetchHealth(): Promise<{ status: string }> {
   const { data } = await api.get('/health')
   return data
 }
+
+export async function syncVault(): Promise<{ status: string; detail: string }> {
+  const { data } = await api.post('/api/v1/sync')
+  return data
+}

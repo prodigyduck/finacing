@@ -21,8 +21,8 @@ We believe everyone deserves access to sophisticated portfolio analytics without
 We achieve this by:
 - Simplifying investment tracking through intuitive interfaces
 - Providing actionable analytics without overwhelming users
-- Leveraging tools users already use (Google Keep)
-- Maintaining privacy by keeping data in user-controlled systems
+- Leveraging local-first tools users already use (Obsidian)
+- Maintaining absolute privacy by keeping data on the user's machine
 
 ---
 
@@ -55,10 +55,10 @@ Individual investors face several challenges:
 
 Financing addresses these problems by:
 
-1. **Leveraging Existing Tools:** Use Google Keep, a tool many already use for notes and reminders
-2. **Simple Data Entry:** Natural language parsing for investment notes
+1. **Local-First Architecture:** Use Obsidian, a local-first markdown tool many already use for notes
+2. **Simple Data Entry:** Natural language parsing for investment records (M.DD format)
 3. **Automated Analytics:** Real-time portfolio calculations and visualizations
-4. **Privacy-First:** Data stays in user's Google Keep, not our servers
+4. **Absolute Privacy:** Data stays on the user's machine in local Obsidian vault, never sent to external servers
 5. **Zero Learning Curve:** Intuitive interface, no financial expertise required
 6. **Free to Use:** Open-source, no subscription fees
 
@@ -120,9 +120,10 @@ Financing addresses these problems by:
    - **Value:** Reduce portfolio risk through awareness
 
 4. **Privacy & Control**
-   - Data in your Google Keep
+   - Data in your local Obsidian vault
    - No account required
-   - No personal data collection
+   - No data sent to external servers
+   - No credentials to manage
    - **Value:** Complete privacy and data ownership
 
 5. **Accessibility**
@@ -139,12 +140,12 @@ Financing addresses these problems by:
 
 | Feature | Financing | Spreadsheets |
 |---------|-----------|--------------|
-| Automated Calculations | ✅ | ❌ (Manual) |
-| Visualizations | ✅ | ⚠️ (Manual setup) |
-| Real-time Updates | ✅ | ❌ |
-| Error-prone | ❌ | ✅ |
-| Data Entry | Natural language | Structured format |
-| Collaboration | ⚠️ (Single user) | ✅ |
+| Automated Calculations | Yes | No (Manual) |
+| Visualizations | Yes | Partial (Manual setup) |
+| Real-time Updates | Yes | No |
+| Error-prone | No | Yes |
+| Data Entry | Natural format (M.DD) | Structured format |
+| Privacy | Local files | Cloud-based |
 
 **Why Financing Wins:** Automation, accuracy, and ease of use
 
@@ -154,10 +155,10 @@ Financing addresses these problems by:
 
 | Feature | Financing | Trading Platforms |
 |---------|-----------|-------------------|
-| Multi-Account | ✅ | ❌ (Single platform) |
-| Deep Analytics | ✅ | ⚠️ (Basic) |
-| Privacy | ✅ (Your data) | ❌ (Platform data) |
-| Customization | ✅ | ❌ |
+| Multi-Account | Yes | No (Single platform) |
+| Deep Analytics | Yes | Partial (Basic) |
+| Privacy | Yes (Your local data) | No (Platform data) |
+| Customization | Yes | No |
 | Cost | Free | Subscription-based |
 | Learning Curve | Low | Medium |
 
@@ -191,15 +192,15 @@ Financing addresses these problems by:
 2. **Installation**
    - User clones repository or downloads application
    - User runs installation commands
-   - User configures Google Keep credentials
+   - User configures Obsidian vault path (default: ~/git/obsidian/투자/투자.md)
 
 3. **First Use**
-   - User creates first investment note in Google Keep
+   - User ensures investment data exists in Obsidian vault (M.DD format)
    - User views dashboard with parsed data
    - User explores visualizations and analytics
 
 4. **Adoption**
-   - User creates more investment notes
+   - User adds more investment records to Obsidian
    - User sets up regular portfolio reviews
    - User discovers insights about portfolio
 
@@ -210,11 +211,11 @@ Financing addresses these problems by:
 
 ### Key Moments
 
-**Aha Moment:** First time user sees portfolio visualized automatically from a simple note
+**Aha Moment:** First time user sees portfolio visualized automatically from a simple markdown file
 
 **Habit Formation:** Regular dashboard checks become part of investment routine
 
-**Advocacy:** User recommends to other investors due to simplicity and value
+**Advocacy:** User recommends to other investors due to simplicity, privacy, and value
 
 ---
 
@@ -248,7 +249,7 @@ Financing addresses these problems by:
 ### Business Metrics (Future)
 
 **If Monetized:**
-- Conversion rate (free → paid)
+- Conversion rate (free -> paid)
 - Average revenue per user (ARPU)
 - Customer acquisition cost (CAC)
 - Lifetime value (LTV)
@@ -265,8 +266,9 @@ Financing addresses these problems by:
    - Intuitive user experience
 
 2. **Privacy by Design**
-   - User-controlled data
+   - User-controlled data on local machine
    - No unnecessary data collection
+   - No external API dependencies for core data
    - Transparent data handling
 
 3. **Progressive Disclosure**
@@ -295,10 +297,11 @@ Financing addresses these problems by:
    - Easy to extend
    - Testable components
 
-2. **Privacy-First Design**
-   - Data stays with user
+2. **Local-First Design**
+   - Data stays on user's machine
    - No centralized database
-   - GDPR-friendly
+   - GDPR-friendly by nature
+   - No external API dependencies
 
 3. **Open Source**
    - Community contributions
@@ -309,13 +312,14 @@ Financing addresses these problems by:
 
 1. **Low Barrier to Entry**
    - Free to use
-   - Simple setup
+   - Simple setup (just point to Obsidian vault)
    - No account required
+   - No credentials to manage
 
 2. **Niche Focus**
    - Individual investors
    - Korean market (initially)
-   - Google Keep integration
+   - Obsidian local-first integration
 
 3. **Community-Led**
    - User-driven features
@@ -329,8 +333,9 @@ Financing addresses these problems by:
 ### Phase 1: Foundation (Current)
 - Core portfolio tracking
 - Basic analytics
-- Google Keep integration
+- Obsidian vault data reading
 - Single-user support
+- FastAPI backend
 
 ### Phase 2: Enhanced Analytics (3-6 months)
 - Historical performance tracking
@@ -342,7 +347,7 @@ Financing addresses these problems by:
 - Multi-user support
 - Multiple data sources
 - Mobile application
-- REST API
+- Full REST API
 
 ### Phase 4: Ecosystem (12+ months)
 - Third-party integrations
@@ -362,16 +367,16 @@ Financing addresses these problems by:
 - Improve onboarding experience
 - Gather and act on user feedback
 
-**Risk:** Google Keep API becomes unavailable
+**Risk:** Obsidian vault format changes
 **Mitigation:**
-- Implement multiple data source support
-- Provide data export functionality
-- Build migration tools
+- Implement flexible parser with format validation
+- Support multiple file formats
+- Provide data migration tools
 
 **Risk:** Competition from larger platforms
 **Mitigation:**
 - Focus on niche use case
-- Maintain simplicity advantage
+- Maintain simplicity and privacy advantage
 - Leverage open-source community
 
 ---
@@ -382,7 +387,7 @@ Financing addresses these problems by:
 
 **Problem:** Kim, 35, works long hours and hasn't reviewed her portfolio in months
 
-**Solution:** Financing automated tracking gave her a clear view in 5 minutes
+**Solution:** Financing automated tracking gave her a clear view in 5 minutes from her Obsidian notes
 
 **Outcome:** Rebalanced portfolio, reduced concentration risk, better returns
 
@@ -392,7 +397,7 @@ Financing addresses these problems by:
 
 **Problem:** Lee, 50, planning retirement, unsure if on track
 
-**Solution:** Financing historical tracking showed consistent progress
+**Solution:** Financing historical tracking showed consistent progress from vault records
 
 **Outcome:** Confident retirement plan, adjusted savings rate appropriately
 
@@ -402,7 +407,7 @@ Financing addresses these problems by:
 
 **Problem:** Park, 28, new to investing, overwhelmed by data
 
-**Solution:** Financing simple interface made portfolio understandable
+**Solution:** Financing simple interface made portfolio understandable from daily Obsidian notes
 
 **Outcome:** Better understanding, more confident decisions, continued investing
 
@@ -428,4 +433,5 @@ Financing addresses these problems by:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1.0 | 2026-04-19 | Updated for Obsidian local-first architecture |
 | 1.0.0 | 2026-03-29 | Initial product sense documentation |

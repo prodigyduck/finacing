@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines security considerations, best practices, and guidelines for the Financing project. Security is critical as the application handles sensitive financial data and Google Keep authentication credentials.
+This document outlines security considerations, best practices, and guidelines for the Financing project. The application reads investment data from a local Obsidian vault, so security focuses on local file system protection, input validation, and API security.
 
 ## Security Principles
 
@@ -14,58 +14,67 @@ This document outlines security considerations, best practices, and guidelines f
 
 ---
 
-## Authentication & Authorization
+## Local File Security
 
-### Google Keep Authentication
+### Obsidian Vault Access
 
 **Current Implementation:**
-- Uses `gkeepapi` (unofficial Google Keep API)
-- Email and password stored in environment variables
-- Optional 2FA (Two-Factor Authentication) support
+- Reads investment data from `~/git/obsidian/투자/투자.md`
+- No authentication required (local file access)
+- No credentials stored anywhere in the application
+- Read-only access to the Obsidian vault
 
-**Security Measures:**
-- Credentials stored in `.env` file (never in code)
-- `.env` file excluded from git via `.gitignore`
-- No credential logging or error messages
+**Security Advantages:**
+- No external credentials to protect
+- No third-party API dependencies
+- Data stays entirely on the local machine
+- No network exposure for data retrieval
 
-**Best Practices:**
-```bash
-# ✅ Good: Credentials in .env file
-GOOGLE_KEEP_EMAIL=your_email@gmail.com
-GOOGLE_KEEP_PASSWORD=your_password
-GOOGLE_KEEP_MASTER_TOKEN=your_2fa_token
-
-# ❌ Bad: Hardcoded credentials
-EMAIL = "your_email@gmail.com"
-PASSWORD = "your_password"
-```
-
-**Authentication Flow:**
-```
-User enters credentials → Stored in .env → gkeepapi authenticates → Session token stored
-```
-
-**2FA Setup:**
-If you have 2FA enabled on your Google account, you need to generate an app-specific password:
-1. Go to Google Account Security
-2. Enable 2FA if not already enabled
-3. Generate app-specific password for "Mail/Calendar"
-4. Use this password in `.env` file
-
-**Authentication Error Handling:**
+**File Path Security:**
 ```python
-# ✅ Good: Secure error handling
-try:
-    keep.login(email, password)
-except gkeepapi.LoginException as e:
-    st.error("Authentication failed. Please check your credentials.")
-    # Never log or display the actual error message which may contain sensitive info
+# Good: Safe path handling
+from pathlib import Path
 
-# ❌ Bad: Leaking sensitive information
-try:
-    keep.login(email, password)
-except Exception as e:
-    st.error(f"Login failed: {e}")  # May reveal sensitive details
+def get_vault_path() -> Path:
+    """Get the Obsidian vault file path from config."""
+    vault_path = Path(os.getenv(
+        "OBSIDIAN_VAULT_PATH",
+        str(Path.home() / "git" / "obsidian" / "투자" / "투자.md")
+    ))
+    # Ensure path is within expected directory
+    resolved = vault_path.resolve()
+    expected_root = Path.home() / "git" / "obsidian"
+    if not str(resolved).startswith(str(expected_root.resolve())):
+        raise ValueError("Vault path is outside the expected directory")
+    return resolved
+
+# Bad: Unvalidated path from user input
+def get_vault_path(user_input: str) -> Path:
+    return Path(user_input)  # Path traversal vulnerability
+```
+
+### File Permissions
+
+**Critical Files:**
+```bash
+# Obsidian vault file - readable by owner (600 or 644)
+chmod 600 ~/git/obsidian/투자/투자.md
+
+# Configuration files - restricted to owner
+chmod 600 .env
+
+# Verify permissions
+ls -l ~/git/obsidian/투자/투자.md
+# Expected: -rw------- or -rw-r--r-- (owner read/write)
+```
+
+**Directory Permissions:**
+```bash
+# Obsidian vault directory
+chmod 700 ~/git/obsidian/투자
+
+# Application directory
+chmod 755 /path/to/financing
 ```
 
 ---
@@ -76,85 +85,84 @@ except Exception as e:
 
 | Data Type | Sensitivity | Storage | Handling |
 |-----------|-------------|---------|----------|
-| Google Keep credentials | HIGH | Environment variables | Never logged |
-| Investment portfolio data | MEDIUM | Google Keep (external) | Encrypted in transit |
-| User notes | MEDIUM | Google Keep (external) | User-controlled |
+| Obsidian vault path | LOW | Environment variables | Never logged in full |
+| Investment portfolio data | MEDIUM | Local Obsidian vault | User-controlled |
+| API responses | MEDIUM | In-memory only | No persistent storage |
 | Application logs | LOW | Local filesystem | No sensitive data |
 
 ### Encryption
 
-**In Transit:**
-- All Google Keep API calls use HTTPS (gkeepapi default)
-- No custom encryption needed for HTTPS
+**Local File Access:**
+- Obsidian vault files are local (no network transit)
+- FastAPI serves data over localhost by default
+- Use HTTPS/TLS when deploying to remote access
+
+**In Transit (when accessing via browser):**
+- FastAPI backend serves over HTTP by default
+- For remote access, use a reverse proxy with TLS
+- No sensitive data leaves the local machine in default setup
 
 **At Rest:**
-- Investment data stored in Google Keep (encrypted by Google)
-- Credentials stored in `.env` file (file system permissions)
-- No local database or persistent storage of sensitive data
-
-**File Permissions:**
-```bash
-# Restrict .env file permissions (chmod 600)
-chmod 600 .env
-
-# Verify permissions
-ls -l .env
-# Expected output: -rw------- 1 user group ... .env
-```
+- Investment data stored in local Obsidian vault (file system security)
+- No database or external storage
+- No credential storage required
 
 ### Logging Security
 
 **Logging Policy:**
-- Never log credentials (email, password, tokens)
-- Never log sensitive investment data
+- Never log investment amounts or personal data
+- Never log full file paths in production logs
 - Sanitize logs before output
 
 ```python
-# ✅ Good: Secure logging
+# Good: Secure logging
 import logging
 
 logger = logging.getLogger(__name__)
 
-def login(email: str, password: str):
-    logger.info(f"Attempting login for {email[:3]}***")  # Partial email only
+def read_vault(path: Path):
+    logger.info(f"Reading vault from configured path")
     try:
-        keep.login(email, password)
-        logger.info("Login successful")
+        content = path.read_text(encoding="utf-8")
+        logger.info(f"Successfully read {len(content)} characters")
     except Exception as e:
-        logger.error("Login failed")
+        logger.error(f"Failed to read vault file")
         raise
 
-# ❌ Bad: Logging sensitive data
-def login(email: str, password: str):
-    logger.info(f"Login attempt: {email}, {password}")  # Full credentials logged!
+# Bad: Logging sensitive data
+def read_vault(path: Path):
+    logger.info(f"Reading vault from {path}")  # Full path logged
+    content = path.read_text()
+    logger.info(f"Content: {content}")  # Investment data logged!
 ```
 
 ---
 
 ## Input Validation
 
-### User Input Validation
+### File Input Validation
 
-All user inputs must be validated before processing:
+All file reads must be validated before processing:
 
 ```python
-# ✅ Good: Input validation
-def validate_label(label: str) -> str:
-    """Validate Google Keep label"""
-    if not label or not label.strip():
-        raise ValueError("Label cannot be empty")
-    if len(label) > 100:
-        raise ValueError("Label too long (max 100 characters)")
-    return label.strip()
+# Good: File input validation
+def validate_vault_path(path: Path) -> Path:
+    """Validate Obsidian vault file path"""
+    resolved = path.resolve()
+    if not resolved.exists():
+        raise FileNotFoundError(f"Vault file not found: {resolved.name}")
+    if not resolved.is_file():
+        raise ValueError(f"Vault path is not a file: {resolved.name}")
+    if resolved.suffix != ".md":
+        raise ValueError(f"Vault file must be a markdown file, got: {resolved.suffix}")
+    if not os.access(resolved, os.R_OK):
+        raise PermissionError(f"No read permission for vault file")
+    return resolved
 
-def fetch_data(label: str):
-    validated_label = validate_label(label)
-    # Process validated label
-    return repository.fetch_investment_notes(validated_label)
-
-# ❌ Bad: No validation
-def fetch_data(label: str):
-    return repository.fetch_investment_notes(label)  # Direct use
+# Bad: No validation
+def read_vault(path: str):
+    with open(path) as f:  # No validation of path
+        return f.read()
 ```
 
 ### Data Parsing Validation
@@ -162,25 +170,88 @@ def fetch_data(label: str):
 Validate parsed investment data:
 
 ```python
-# ✅ Good: Validate parsed data
-def parse_note(note_text: str) -> InvestmentAsset:
-    """Parse investment note with validation"""
+# Good: Validate parsed data
+def parse_line(line: str) -> InvestmentRecord:
+    """Parse investment line with validation"""
     try:
-        name, quantity, price = parse_text(note_text)
+        date_str, amount_str = line.strip().split()
     except ValueError as e:
-        raise ValueError(f"Invalid note format: {e}")
+        raise ValueError(f"Invalid line format: {e}")
 
-    if quantity <= 0:
-        raise ValueError("Quantity must be positive")
-    if price.amount < 0:
-        raise ValueError("Price cannot be negative")
+    if not amount_str.endswith("억"):
+        raise ValueError(f"Amount must end with '억': {amount_str}")
 
-    return InvestmentAsset(name, quantity, price)
+    amount = Decimal(amount_str.rstrip("억"))
+    if amount < 0:
+        raise ValueError("Amount cannot be negative")
 
-# ❌ Bad: No validation
-def parse_note(note_text: str) -> InvestmentAsset:
-    name, quantity, price = parse_text(note_text)
-    return InvestmentAsset(name, quantity, price)
+    return InvestmentRecord(date=date_str, amount=amount)
+
+# Bad: No validation
+def parse_line(line: str) -> InvestmentRecord:
+    date_str, amount_str = line.split()
+    return InvestmentRecord(date=date_str, amount=amount_str)
+```
+
+---
+
+## API Security
+
+### FastAPI Endpoint Security
+
+**Current Endpoints:**
+- `GET /api/v1/history` - Returns portfolio history from local Obsidian data
+
+**Security Measures:**
+```python
+# Good: Input validation on API endpoints
+from fastapi import FastAPI, HTTPException
+from pathlib import Path
+
+app = FastAPI()
+
+@app.get("/api/v1/history")
+async def get_history():
+    """Get portfolio history from Obsidian vault"""
+    try:
+        vault_path = get_vault_path()  # Validated path
+        validate_vault_path(vault_path)
+        records = parser.fetch_investment_records(vault_path)
+        return PortfolioHistory(records=records).model_dump()
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Vault file not found")
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="Cannot access vault file")
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=f"Invalid data: {e}")
+
+# Bad: Unvalidated endpoint
+@app.get("/api/v1/history")
+async def get_history():
+    data = open("some/path").read()  # No validation
+    return {"data": data}
+```
+
+### CORS Configuration
+
+Restrict CORS to known origins:
+
+```python
+# Good: Restricted CORS
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # Frontend dev server only
+    allow_methods=["GET"],
+    allow_headers=[],
+)
+
+# Bad: Open CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows any origin
+)
 ```
 
 ---
@@ -190,11 +261,10 @@ def parse_note(note_text: str) -> InvestmentAsset:
 ### Third-Party Dependencies
 
 **Current Dependencies:**
-- `gkeepapi>=0.13.10` - Google Keep API (unofficial)
-- `streamlit>=1.31.0` - Web framework
+- `fastapi>=0.100.0` - Web framework
+- `uvicorn>=0.20.0` - ASGI server
 - `pandas>=2.2.0` - Data processing
-- `plotly>=5.18.0` - Visualization
-- `requests>=2.31.0` - HTTP client
+- `pydantic>=2.0.0` - Data validation
 
 **Security Measures:**
 1. **Regular Updates:** Keep dependencies up-to-date
@@ -219,24 +289,11 @@ pip-audit
 pip list --outdated
 
 # Update specific package
-pip install --upgrade gkeepapi
+pip install --upgrade fastapi
 
 # Update all dependencies
 pip install --upgrade -r requirements.txt
 ```
-
-### gkeepapi Security Considerations
-
-**Risks:**
-- Unofficial API (not maintained by Google)
-- May break if Google changes API
-- Potential security vulnerabilities in third-party code
-
-**Mitigations:**
-- Monitor gkeepapi for security updates
-- Consider official Google Keep API when available
-- Implement fallback mechanisms for API failures
-- Limit data stored in Google Keep (read-only where possible)
 
 ---
 
@@ -245,9 +302,10 @@ pip install --upgrade -r requirements.txt
 ### Application Access
 
 **Current Deployment:**
-- Local deployment via Streamlit
+- Local deployment via FastAPI + Uvicorn
 - No authentication at application level
 - Access restricted by deployment method
+- No credential storage needed
 
 **Recommended Security Practices:**
 1. **Deploy behind VPN:** Use Tailscale Funnel or SSH tunneling
@@ -256,14 +314,14 @@ pip install --upgrade -r requirements.txt
 
 **Deployment Options:**
 ```bash
-# Option 1: Tailscale Funnel (Recommended for personal use)
-tailscale funnel 8501
+# Option 1: Local only (default)
+uvicorn src.presentation.app:app --host 127.0.0.1 --port 8000
 
-# Option 2: SSH Tunneling
-ssh -L 8501:localhost:8501 user@remote-server
+# Option 2: Tailscale Funnel (Recommended for personal use)
+tailscale funnel 8000
 
-# Option 3: VPN (Corporate environment)
-# Deploy on internal network behind VPN
+# Option 3: SSH Tunneling
+ssh -L 8000:localhost:8000 user@remote-server
 ```
 
 ### File System Permissions
@@ -278,6 +336,9 @@ chmod 755 venv
 
 # Source code - 644 (readable by all)
 chmod 644 src/**/*.py
+
+# Obsidian vault - 600 or 644 (readable by owner)
+chmod 600 ~/git/obsidian/투자/투자.md
 ```
 
 ---
@@ -289,24 +350,23 @@ chmod 644 src/**/*.py
 Never expose sensitive information in error messages:
 
 ```python
-# ✅ Good: Generic error messages
-def fetch_investment_data(label: str):
+# Good: Generic error messages
+def fetch_investment_data():
     try:
-        notes = keep.find(labels=[label])
-        return notes
-    except gkeepapi.APIException:
-        st.error("Failed to fetch data from Google Keep. Please try again later.")
-        # No stack traces or API details exposed
+        vault_path = get_vault_path()
+        return parser.fetch_investment_records(vault_path)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Data source not available")
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="Cannot access data source")
 
-# ❌ Bad: Detailed error messages
-def fetch_investment_data(label: str):
+# Bad: Detailed error messages
+def fetch_investment_data():
     try:
-        notes = keep.find(labels=[label])
-        return notes
+        vault_path = get_vault_path()
+        return parser.fetch_investment_records(vault_path)
     except Exception as e:
-        st.error(f"Error: {e}")  # May reveal internal structure
-        import traceback
-        st.error(traceback.format_exc())  # Exposes stack trace
+        raise HTTPException(status_code=500, detail=str(e))  # May reveal internal structure
 ```
 
 ### Debug Mode
@@ -314,58 +374,34 @@ def fetch_investment_data(label: str):
 **Never enable debug mode in production:**
 
 ```python
-# ❌ Bad: Debug mode enabled
+# Bad: Debug mode enabled
 DEBUG = True  # Exposes sensitive information
 
-# ✅ Good: Debug mode disabled in production
+# Good: Debug mode disabled in production
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
-```
-
----
-
-## Session Management
-
-### Streamlit Session Security
-
-**Current Implementation:**
-- Streamlit manages sessions automatically
-- Session state stored in browser (no server-side storage)
-- No custom session management needed
-
-**Best Practices:**
-- Don't store sensitive data in session state
-- Use `st.session_state` for UI state only
-- Clear session state on logout
-
-```python
-# ✅ Good: Non-sensitive session state
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-
-# ❌ Bad: Storing credentials in session state
-st.session_state.password = password  # Dangerous!
 ```
 
 ---
 
 ## Backup & Recovery
 
-### Google Keep Backup
+### Local File Backup
 
 **Data Location:**
-- Investment data stored in Google Keep
-- Google Keep provides automatic backups
-- No local backup required for investment data
+- Investment data stored in local Obsidian vault
+- Obsidian provides version history (if using Obsidian app)
+- Git can be used for vault version control
 
 **Recommended Backup Strategy:**
-1. **Google Keep Native Backup:** Export notes regularly
-2. **Manual Export:** Periodically export investment notes as JSON/text
-3. **Version Control:** Use Git for code and configuration files (excluding `.env`)
+1. **Obsidian Version History:** Use Obsidian's built-in file recovery
+2. **Git Version Control:** Keep vault under git for history
+3. **Manual Export:** Periodically export investment data as JSON/CSV
+4. **Cloud Sync:** Use Obsidian Sync or similar for off-device backup
 
 **Export Procedure:**
 ```bash
-# Export investment notes manually (via gkeepapi)
-python scripts/export_investment_notes.py --format json --output backup.json
+# Export investment data from API
+curl http://localhost:8000/api/v1/history -o backup.json
 ```
 
 ---
@@ -392,14 +428,15 @@ trufflehog --regex --entropy=False /path/to/repo
 ### Manual Security Review
 
 **Checklist:**
-- [ ] No credentials in code
+- [ ] No credentials in code (none needed for local file access)
 - [ ] `.env` file in `.gitignore`
 - [ ] Input validation on all user inputs
 - [ ] No sensitive data in logs
 - [ ] Dependencies up-to-date
-- [ ] HTTPS enabled for all external calls
 - [ ] File permissions set correctly
 - [ ] Debug mode disabled in production
+- [ ] CORS properly configured
+- [ ] Vault path validated and restricted
 
 ---
 
@@ -407,8 +444,8 @@ trufflehog --regex --entropy=False /path/to/repo
 
 ### Security Incident Types
 
-1. **Credential Exposure:** `.env` file compromised
-2. **Data Breach:** Unauthorized access to investment data
+1. **Data Exposure:** Unauthorized access to investment data
+2. **File Tampering:** Modification of Obsidian vault files
 3. **Malicious Code:** Third-party dependency vulnerability
 4. **Denial of Service:** Application unavailable due to attack
 
@@ -417,7 +454,7 @@ trufflehog --regex --entropy=False /path/to/repo
 **Immediate Actions:**
 1. **Isolate:** Disconnect application from network
 2. **Assess:** Determine scope and impact
-3. **Contain:** Change credentials, revoke access
+3. **Contain:** Restore vault from backup, restrict access
 4. **Document:** Log all actions taken
 
 **Post-Incident:**
@@ -438,13 +475,14 @@ trufflehog --regex --entropy=False /path/to/repo
 
 **GDPR Considerations:**
 - Investment data is personal data
-- User controls data via Google Keep
+- User controls data via local Obsidian vault
 - No data processing beyond what user authorizes
+- No data leaves the local machine
 
 **Best Practices:**
 - Minimize data collection
-- Provide data export options
-- Allow data deletion
+- Provide data export options via API
+- Allow data deletion through Obsidian vault management
 
 ### Financial Data
 
@@ -455,12 +493,12 @@ trufflehog --regex --entropy=False /path/to/repo
 
 **Disclaimer:**
 ```python
-# Include disclaimer in UI
-st.warning("""
-**Disclaimer:** This application is for informational purposes only.
-It does not provide financial advice or recommendations.
-Please consult a qualified financial advisor for investment decisions.
-""")
+# Include disclaimer in API responses
+DISCLAIMER = (
+    "This application is for informational purposes only. "
+    "It does not provide financial advice or recommendations. "
+    "Please consult a qualified financial advisor for investment decisions."
+)
 ```
 
 ---
@@ -470,6 +508,7 @@ Please consult a qualified financial advisor for investment decisions.
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)
 - [PEP 8 - Style Guide for Python Code](https://pep8.org/)
 - [Python Security Best Practices](https://python.readthedocs.io/en/stable/library/security_warnings.html)
+- [FastAPI Security](https://fastapi.tiangolo.com/tutorial/security/)
 
 ---
 
@@ -477,4 +516,5 @@ Please consult a qualified financial advisor for investment decisions.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1.0 | 2026-04-19 | Updated for Obsidian local file architecture |
 | 1.0.0 | 2026-03-29 | Initial security documentation |

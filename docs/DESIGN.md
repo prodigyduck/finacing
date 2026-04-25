@@ -13,16 +13,16 @@ Every module, class, or function should have one, and only one, reason to change
 
 **Examples:**
 - `Portfolio` entity focuses only on portfolio aggregation logic
-- `NoteParser` handles only text parsing, not data retrieval
+- `ObsidianParser` handles only text parsing, not data retrieval
 - `FetchInvestmentData` use case orchestrates only data fetching
 
 ```python
-# ✅ Good: Single responsibility
+# Good: Single responsibility
 class Portfolio:
     def total_value(self) -> Money:
         """Only calculates total value"""
 
-# ❌ Bad: Multiple responsibilities
+# Bad: Multiple responsibilities
 class Portfolio:
     def total_value(self) -> Money:  # Business logic
     def fetch_from_api(self) -> None:  # I/O operation
@@ -34,14 +34,14 @@ Software entities should be open for extension but closed for modification.
 
 **Examples:**
 - New asset types can be added by extending `AssetType` enum
-- New repositories can implement `IKeepRepository` port
+- New parsers can implement `IDataParser` port
 - New use cases can be added without modifying existing ones
 
 ```python
-# ✅ Good: Extensible through interfaces
-class IKeepRepository(ABC):
+# Good: Extensible through interfaces
+class IDataParser(ABC):
     @abstractmethod
-    def fetch_investment_notes(self, label: str) -> List[InvestmentAsset]:
+    def fetch_investment_records(self, label: str) -> List[InvestmentRecord]:
         pass
 
 # New implementations can be added without modifying existing code
@@ -51,27 +51,27 @@ class IKeepRepository(ABC):
 Objects of a superclass should be replaceable with objects of its subclasses without breaking the application.
 
 **Examples:**
-- Any `IKeepRepository` implementation can be substituted
-- Mock repositories can replace real repositories in tests
+- Any `IDataParser` implementation can be substituted
+- Mock parsers can replace real parsers in tests
 
 #### Interface Segregation Principle (ISP)
 Clients should not depend on interfaces they don't use.
 
 **Examples:**
-- `IKeepRepository` defines only fetch operations
+- `IDataParser` defines only data parsing operations
 - Separate interfaces for read vs. write operations (if needed)
 
 ```python
-# ✅ Good: Focused interface
-class IKeepRepository(ABC):
+# Good: Focused interface
+class IDataParser(ABC):
     @abstractmethod
-    def fetch_investment_notes(self, label: str) -> List[InvestmentAsset]:
+    def fetch_investment_records(self, label: str) -> List[InvestmentRecord]:
         pass
 
-# ❌ Bad: Bloated interface
-class IKeepRepository(ABC):
+# Bad: Bloated interface
+class IDataParser(ABC):
     @abstractmethod
-    def fetch_investment_notes(self, label: str) -> List[InvestmentAsset]:
+    def fetch_investment_records(self, label: str) -> List[InvestmentRecord]:
         pass
     @abstractmethod
     def authenticate(self, email: str, password: str) -> bool:  # Unrelated
@@ -83,19 +83,19 @@ class IKeepRepository(ABC):
 Depend on abstractions, not concretions.
 
 **Examples:**
-- Use cases depend on `IKeepRepository` port, not `GKeepRepository` implementation
+- Use cases depend on `IDataParser` port, not `ObsidianParser` implementation
 - Domain layer has no dependencies on outer layers
 
 ```python
-# ✅ Good: Depend on abstraction
+# Good: Depend on abstraction
 class FetchInvestmentData:
-    def __init__(self, repository: IKeepRepository):  # Abstract interface
-        self._repository = repository
+    def __init__(self, parser: IDataParser):  # Abstract interface
+        self._parser = parser
 
-# ❌ Bad: Depend on concrete
+# Bad: Depend on concrete
 class FetchInvestmentData:
-    def __init__(self, repository: GKeepRepository):  # Concrete implementation
-        self._repository = repository
+    def __init__(self, parser: ObsidianParser):  # Concrete implementation
+        self._parser = parser
 ```
 
 ---
@@ -106,20 +106,20 @@ class FetchInvestmentData:
 Names should reveal intent, avoid disinformation, and be pronounceable.
 
 ```python
-# ✅ Good: Clear, descriptive names
+# Good: Clear, descriptive names
 def calculate_portfolio_return_rate(portfolio: Portfolio) -> Decimal:
     """Calculates annualized return rate for portfolio"""
 
-class InvestmentAsset:
-    def __init__(self, name: str, quantity: int, unit_price: Money):
+class InvestmentRecord:
+    def __init__(self, date: str, amount: Decimal):
         pass
 
-# ❌ Bad: Vague, misleading names
+# Bad: Vague, misleading names
 def calc(x, y):
     pass
 
-class Asset:
-    def __init__(self, n, q, p):
+class Record:
+    def __init__(self, d, a):
         pass
 ```
 
@@ -127,14 +127,14 @@ class Asset:
 Each function should have a single responsibility and be small.
 
 ```python
-# ✅ Good: Single responsibility, well-named
-def parse_investment_note(note_text: str) -> InvestmentAsset:
-    """Parses a single investment note into an InvestmentAsset"""
+# Good: Single responsibility, well-named
+def parse_investment_line(line: str) -> InvestmentRecord:
+    """Parses a single investment line into an InvestmentRecord"""
 
-def calculate_total_value(assets: List[InvestmentAsset]) -> Money:
-    """Calculates total value of all assets"""
+def calculate_total_value(records: List[InvestmentRecord]) -> Money:
+    """Calculates total value of all records"""
 
-# ❌ Bad: Multiple responsibilities
+# Bad: Multiple responsibilities
 def process_investment_data(text: str) -> Tuple[Money, Dict[str, float]]:
     """Parses, validates, calculates, and formats in one function"""
     # ... 50 lines of mixed logic
@@ -144,7 +144,7 @@ def process_investment_data(text: str) -> Tuple[Money, Dict[str, float]]:
 Avoid code duplication. Extract common logic into reusable functions.
 
 ```python
-# ✅ Good: Reusable helper function
+# Good: Reusable helper function
 def format_currency(amount: Decimal, currency: str) -> str:
     """Formats a monetary amount for display"""
     return f"{amount:,.2f} {currency}"
@@ -153,12 +153,12 @@ def format_currency(amount: Decimal, currency: str) -> str:
 display_total = format_currency(total.amount, total.currency)
 display_gain = format_currency(gain.amount, gain.currency)
 
-# ❌ Bad: Duplicated logic
+# Bad: Duplicated logic
 def display_total(total: Money) -> str:
     return f"{total.amount:,.2f} {total.currency}"
 
 def display_gain(gain: Money) -> str:
-    return f"{gain.amount:,.2f} {gain.currency}"  # Same formatting logic
+    return f"{gain.amount:,.2f} {total.currency}"  # Same formatting logic
 ```
 
 ---
@@ -169,7 +169,7 @@ def display_gain(gain: Money) -> str:
 Each test should be independent and not depend on other tests.
 
 ```python
-# ✅ Good: Independent tests
+# Good: Independent tests
 def test_portfolio_empty():
     portfolio = Portfolio(assets=[])
     assert portfolio.total_value().amount == Decimal("0")
@@ -178,7 +178,7 @@ def test_portfolio_single_asset():
     portfolio = Portfolio(assets=[asset])
     assert portfolio.total_value().amount == expected_value
 
-# ❌ Bad: Dependent tests
+# Bad: Dependent tests
 test_portfolio_empty()
 asset = create_test_asset()  # State shared across tests
 ```
@@ -187,14 +187,14 @@ asset = create_test_asset()  # State shared across tests
 Test names should clearly describe what is being tested and the expected outcome.
 
 ```python
-# ✅ Good: Descriptive test names
+# Good: Descriptive test names
 def test_portfolio_total_value_returns_sum_of_all_assets():
     pass
 
 def test_portfolio_allocation_calculates_correct_percentages():
     pass
 
-# ❌ Bad: Vague test names
+# Bad: Vague test names
 def test_portfolio_1():
     pass
 
@@ -220,31 +220,33 @@ Abstracts data access logic, providing a collection-like interface for domain ob
 
 ```python
 # Interface (Port)
-class IKeepRepository(ABC):
+class IDataParser(ABC):
     @abstractmethod
-    def fetch_investment_notes(self, label: str) -> List[InvestmentAsset]:
+    def fetch_investment_records(self, label: str) -> List[InvestmentRecord]:
         pass
 
 # Implementation (Adapter)
-class GKeepRepository(IKeepRepository):
-    def fetch_investment_notes(self, label: str) -> List[InvestmentAsset]:
-        # Google Keep API integration
-        notes = self._keep.find(labels=[label])
-        return [self._parse_note(note) for note in notes]
+class ObsidianParser(IDataParser):
+    def fetch_investment_records(self, label: str) -> List[InvestmentRecord]:
+        # Read from Obsidian markdown file
+        file_path = Path("~/git/obsidian/투자/투자.md").expanduser()
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        return self._parse_lines(content)
 ```
 
 ### 2. Dependency Injection
-Pass dependencies (repositories, services) into objects rather than creating them internally.
+Pass dependencies (parsers, services) into objects rather than creating them internally.
 
 ```python
 # Constructor injection
 class FetchInvestmentData:
-    def __init__(self, repository: IKeepRepository):
-        self._repository = repository
+    def __init__(self, parser: IDataParser):
+        self._parser = parser
 
 # Usage
-repository = GKeepRepository(email, password, master_token)
-use_case = FetchInvestmentData(repository)
+parser = ObsidianParser(vault_path="~/git/obsidian/투자/투자.md")
+use_case = FetchInvestmentData(parser)
 ```
 
 ### 3. Value Object Pattern
@@ -335,10 +337,11 @@ def calculate_return_rate(
 # Standard library
 import os
 from typing import List
+from pathlib import Path
 
 # Third-party
-import streamlit as st
-import pandas as pd
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 
 # Local
 from src.domain.entities.portfolio import Portfolio
@@ -358,7 +361,7 @@ from src.application.use_cases.fetch_investment_data import FetchInvestmentData
 import ...
 
 # Constants
-DEFAULT_LABEL = "투자"
+DEFAULT_OBSIDIAN_PATH = "~/git/obsidian/투자/투자.md"
 
 # Classes
 class MyClass:
@@ -385,7 +388,7 @@ if __name__ == "__main__":
 4. **Preserve Context:** Include relevant information in error messages
 
 ```python
-# ✅ Good: Specific exception handling
+# Good: Specific exception handling
 def calculate_return_rate(initial: Money, current: Money, days: int) -> Decimal:
     if initial.amount == 0:
         raise ValueError(f"Initial value cannot be zero: {initial}")
@@ -397,7 +400,7 @@ def calculate_return_rate(initial: Money, current: Money, days: int) -> Decimal:
     except ZeroDivisionError as e:
         raise ValueError(f"Cannot calculate return: {e}") from e
 
-# ❌ Bad: Generic exception handling
+# Bad: Generic exception handling
 def calculate_return_rate(initial: Money, current: Money, days: int) -> Decimal:
     try:
         return ((current.amount - initial.amount) / initial.amount) ** (365 / days)
@@ -442,13 +445,13 @@ class AssetNotFoundError(DomainError):
 - Use generators for large datasets
 
 ```python
-# ✅ Good: List comprehension (fast and readable)
+# Good: List comprehension (fast and readable)
 allocation = [asset.total_value() for asset in assets]
 
-# ✅ Good: Generator for large datasets
+# Good: Generator for large datasets
 total = sum(asset.total_value() for asset in large_dataset)
 
-# ❌ Bad: Unnecessary optimization for small datasets
+# Bad: Unnecessary optimization for small datasets
 total = sum(map(lambda a: a.total_value(), assets))  # Less readable
 ```
 
@@ -459,20 +462,22 @@ total = sum(map(lambda a: a.total_value(), assets))  # Less readable
 ### Principles
 
 1. **Validate All Inputs:** Never trust user input or external data
-2. **Use Environment Variables:** Store sensitive data in `.env` files
+2. **Use Environment Variables:** Store configuration in `.env` files
 3. **Never Log Secrets:** Avoid logging passwords, tokens, or sensitive data
-4. **Principle of Least Privilege:** Use minimal necessary permissions
+4. **Principle of Least Privilege:** Use minimal necessary file permissions
 
 ```python
-# ✅ Good: Environment variables for sensitive data
+# Good: Environment variables for configuration
 import os
+from pathlib import Path
 
-EMAIL = os.getenv("GOOGLE_KEEP_EMAIL")
-PASSWORD = os.getenv("GOOGLE_KEEP_PASSWORD")
+OBSIDIAN_VAULT_PATH = os.getenv(
+    "OBSIDIAN_VAULT_PATH",
+    str(Path.home() / "git" / "obsidian" / "투자" / "투자.md")
+)
 
-# ❌ Bad: Hardcoded secrets
-EMAIL = "myemail@gmail.com"
-PASSWORD = "mypassword123"
+# Bad: Hardcoded paths with potential sensitive info
+FILE_PATH = "/home/username/git/obsidian/투자/투자.md"
 ```
 
 ---
@@ -508,4 +513,5 @@ PASSWORD = "mypassword123"
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1.0 | 2026-04-19 | Updated to reflect Obsidian-based architecture |
 | 1.0.0 | 2026-03-29 | Initial design documentation |

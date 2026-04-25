@@ -29,6 +29,9 @@ ENV/
 # IDE
 .vscode/
 .idea/
+
+# Claude Code
+.claude/
 *.swp
 *.swo
 
@@ -36,6 +39,7 @@ ENV/
 .env
 .env.local
 .env.*.local
+config.yaml
 
 # Google Keep token
 *.json

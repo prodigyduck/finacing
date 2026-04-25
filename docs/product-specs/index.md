@@ -19,37 +19,38 @@ This directory contains detailed product specifications for the Financing projec
 ### Core Features (v1.0.0)
 
 #### 1. Investment Data Management
-- **Status:** ✅ Implemented
-- **Description:** Manage investment data through Google Keep notes
-- **User Story:** As an investor, I want to record my investments in Google Keep so that I can track my portfolio
+- **Status:** Implemented
+- **Description:** Manage investment data through Obsidian vault markdown files
+- **User Story:** As an investor, I want to record my investments in Obsidian so that I can track my portfolio using a tool I already use
 - **Acceptance Criteria:**
-  - Parse investment notes from Google Keep
-  - Support natural language format
-  - Handle multiple asset types (stocks, ETFs, bonds, cash, other)
+  - Parse investment records from Obsidian markdown file
+  - Support M.DD format (e.g., "4.19 1.5억")
+  - Handle multiple date entries
   - Validate investment data
 
 #### 2. Portfolio Visualization
-- **Status:** ✅ Implemented
+- **Status:** Implemented
 - **Description:** Visualize portfolio composition and performance
 - **User Story:** As an investor, I want to see my portfolio visualization so that I can understand my asset allocation
 - **Acceptance Criteria:**
   - Display total portfolio value
-  - Show asset allocation pie chart
-  - List individual assets with values
+  - Show asset allocation charts
+  - List individual records with amounts
   - Display performance metrics
 
-#### 3. Google Keep Integration
-- **Status:** ✅ Implemented
-- **Description:** Integrate with Google Keep for data storage
-- **User Story:** As an investor, I want to use Google Keep for data storage so that my data stays under my control
+#### 3. Obsidian Data Reading
+- **Status:** Implemented
+- **Description:** Read investment data from local Obsidian vault
+- **User Story:** As an investor, I want to use Obsidian for data storage so that my data stays on my machine under my full control
 - **Acceptance Criteria:**
-  - Authenticate with Google Keep
-  - Fetch notes with specific label
-  - Parse note content
-  - Handle authentication errors
+  - Read from configurable Obsidian vault path
+  - Parse markdown file content (M.DD 억 format)
+  - Handle file encoding (UTF-8)
+  - Handle file not found and permission errors gracefully
+  - No authentication required
 
 #### 4. Dashboard UI
-- **Status:** ✅ Implemented
+- **Status:** Implemented
 - **Description:** Provide user-friendly dashboard interface
 - **User Story:** As an investor, I want a simple dashboard so that I can quickly view my portfolio
 - **Acceptance Criteria:**
@@ -59,13 +60,13 @@ This directory contains detailed product specifications for the Financing projec
   - Responsive design
 
 #### 5. Settings Configuration
-- **Status:** ✅ Implemented
+- **Status:** Implemented
 - **Description:** Configure application settings
 - **User Story:** As an investor, I want to configure my settings so that I can customize my experience
 - **Acceptance Criteria:**
-  - Configure Google Keep credentials
-  - Test connection to Google Keep
-  - Save settings securely
+  - Configure Obsidian vault file path
+  - Test file accessibility
+  - Save settings
   - Handle configuration errors
 
 ---
@@ -73,7 +74,7 @@ This directory contains detailed product specifications for the Financing projec
 ### Future Features (v1.1.0+)
 
 #### 1. Historical Data Tracking
-- **Status:** 📋 Planned (v1.1.0)
+- **Status:** Planned (v1.1.0)
 - **Description:** Track portfolio performance over time
 - **User Story:** As an investor, I want to see historical performance so that I can track my investment progress
 - **Acceptance Criteria:**
@@ -83,7 +84,7 @@ This directory contains detailed product specifications for the Financing projec
   - Export historical data
 
 #### 2. Enhanced Analytics
-- **Status:** 📋 Planned (v1.2.0)
+- **Status:** Planned (v1.2.0)
 - **Description:** Provide advanced portfolio analytics
 - **User Story:** As an investor, I want advanced analytics so that I can make better investment decisions
 - **Acceptance Criteria:**
@@ -93,7 +94,7 @@ This directory contains detailed product specifications for the Financing projec
   - Add benchmark comparisons
 
 #### 3. Data Export
-- **Status:** 📋 Planned (v1.1.0)
+- **Status:** Planned (v1.1.0)
 - **Description:** Export portfolio data
 - **User Story:** As an investor, I want to export my data so that I can use it elsewhere
 - **Acceptance Criteria:**
@@ -103,7 +104,7 @@ This directory contains detailed product specifications for the Financing projec
   - Generate PDF reports
 
 #### 4. Multi-User Support
-- **Status:** 📋 Planned (v2.0.0)
+- **Status:** Planned (v2.0.0)
 - **Description:** Support multiple users
 - **User Story:** As an investor, I want my own account so that my portfolio is private
 - **Acceptance Criteria:**
@@ -120,37 +121,37 @@ This directory contains detailed product specifications for the Financing projec
 
 | Requirement | Target | Current Status |
 |-------------|--------|----------------|
-| Page Load Time | < 2s | ✅ < 1s |
-| API Response Time | < 500ms | ✅ < 100ms |
-| Test Execution Time | < 10s | ✅ ~15s (needs optimization) |
-| Concurrent Users | 10+ (single user only currently) | ❌ Single user |
+| Page Load Time | < 2s | Achieved (< 1s) |
+| API Response Time | < 500ms | Achieved (< 100ms) |
+| Test Execution Time | < 10s | ~15s (needs optimization) |
+| Concurrent Users | 10+ (single user only currently) | Single user |
 
 ### Reliability
 
 | Requirement | Target | Current Status |
 |-------------|--------|----------------|
-| System Uptime | > 99% | ✅ 100% (local deployment) |
-| Data Loss | Zero | ✅ Zero (user-controlled data) |
-| Error Rate | < 0.1% | ⚠️ Needs monitoring |
-| Recovery Time | < 5 minutes | ⚠️ Needs monitoring |
+| System Uptime | > 99% | 100% (local deployment) |
+| Data Loss | Zero | Zero (user-controlled local files) |
+| Error Rate | < 0.1% | Needs monitoring |
+| Recovery Time | < 5 minutes | Needs monitoring |
 
 ### Security
 
 | Requirement | Target | Current Status |
 |-------------|--------|----------------|
-| Credential Storage | Environment variables | ✅ Implemented |
-| Input Validation | All inputs | ⚠️ Partial |
-| HTTPS/TLS | Required | ✅ Google Keep API |
-| Data Encryption | At rest and in transit | ✅ Google Keep |
+| Credential Storage | Not needed | No credentials required |
+| Input Validation | All inputs | Partial |
+| HTTPS/TLS | Recommended | Local HTTP (FastAPI default) |
+| Data Storage | Local files only | Obsidian vault (local) |
 
 ### Usability
 
 | Requirement | Target | Current Status |
 |-------------|--------|----------------|
-| Learning Curve | < 15 minutes | ✅ < 5 minutes |
-| Error Messages | Clear and actionable | ⚠️ Partial |
-| Documentation | Comprehensive | ✅ Complete |
-| Support Community | Active | ⚠️ Needs growth |
+| Learning Curve | < 15 minutes | < 5 minutes |
+| Error Messages | Clear and actionable | Partial |
+| Documentation | Comprehensive | Complete |
+| Support Community | Active | Needs growth |
 
 ---
 
@@ -183,9 +184,10 @@ This directory contains detailed product specifications for the Financing projec
 
 ### Phase 1: Foundation (Completed - v1.0.0)
 - [x] Clean Architecture implementation
-- [x] Google Keep integration
+- [x] Obsidian vault data reading
 - [x] Basic portfolio tracking
 - [x] Dashboard UI
+- [x] FastAPI backend with GET /api/v1/history
 - [x] Documentation
 
 ### Phase 2: Enhancement (Q2 2026 - v1.1.0)
@@ -208,7 +210,7 @@ This directory contains detailed product specifications for the Financing projec
 
 ### Phase 5: Ecosystem (2027+)
 - [ ] Mobile application
-- [ ] REST API
+- [ ] Full REST API
 - [ ] Third-party integrations
 - [ ] Community features
 
@@ -241,31 +243,31 @@ This directory contains detailed product specifications for the Financing projec
 
 ### Strengths
 
-1. **Privacy-First:** User data in Google Keep, not our servers
-2. **Simple to Use:** Minimal configuration, intuitive interface
+1. **Privacy-First:** User data in local Obsidian vault, no external servers
+2. **Simple to Use:** Minimal configuration (just vault path), intuitive interface
 3. **Free and Open Source:** No subscription fees, community-driven
 4. **Focused:** Designed for individual investors, not institutions
+5. **No Credentials:** No account needed, no authentication to manage
 
 ### Weaknesses
 
-1. **Single Platform:** Google Keep dependency
+1. **Single Data Source:** Obsidian vault dependency (mitigated by local-first nature)
 2. **Limited Features:** Basic analytics compared to enterprise tools
 3. **No Mobile App:** Web-only currently
 4. **No Multi-User:** Single-user design
 
 ### Opportunities
 
-1. **Multi-Platform Support:** Integrate other data sources
+1. **Multi-Format Support:** Integrate other file formats and data sources
 2. **Advanced Features:** Add sophisticated analytics
 3. **Mobile Expansion:** Develop mobile applications
 4. **Community Growth:** Build active user and contributor community
 
 ### Threats
 
-1. **Google Keep API Changes:** Unofficial API may break
-2. **Competition:** Large platforms entering personal finance space
-3. **Data Privacy Regulations:** Stricter regulations may affect data handling
-4. **Open Source Maintenance:** Long-term sustainability concerns
+1. **Competition:** Large platforms entering personal finance space
+2. **Data Privacy Regulations:** Stricter regulations may affect data handling
+3. **Open Source Maintenance:** Long-term sustainability concerns
 
 ---
 
@@ -273,4 +275,5 @@ This directory contains detailed product specifications for the Financing projec
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1.0 | 2026-04-19 | Updated for Obsidian-based architecture |
 | 1.0.0 | 2026-03-29 | Initial product specifications - MVP features defined |

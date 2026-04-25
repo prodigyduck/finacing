@@ -1,5 +1,7 @@
 import os
 import re
+import subprocess
+import logging
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -8,6 +10,8 @@ from typing import Optional
 from src.domain.entities.investment_record import InvestmentRecord
 from src.domain.entities.portfolio_history import PortfolioHistory
 
+logger = logging.getLogger(__name__)
+
 
 class ObsidianParser:
     def __init__(self, vault_path: Optional[str] = None, investment_file: str = "투자/투자.md"):
@@ -15,6 +19,23 @@ class ObsidianParser:
             vault_path = os.environ.get("OBSIDIAN_VAULT_PATH", os.path.expanduser("~/git/obsidian"))
         self.vault_path = Path(vault_path).expanduser()
         self.investment_file = investment_file
+
+    def pull(self) -> str:
+        """git pull on the Obsidian vault to get latest changes."""
+        try:
+            result = subprocess.run(
+                ["git", "pull", "--ff-only"],
+                cwd=str(self.vault_path),
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            output = result.stdout.strip()
+            logger.info(f"Obsidian git pull: {output}")
+            return output
+        except Exception as e:
+            logger.warning(f"Obsidian git pull failed: {e}")
+            return str(e)
 
     def parse(self, year: Optional[int] = None) -> PortfolioHistory:
         filepath = self.vault_path / self.investment_file

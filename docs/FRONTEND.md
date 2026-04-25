@@ -29,7 +29,7 @@ User Browser → Vue.js SPA (Frontend)
                    ↓
            Application Layer → Domain Layer
                    ↑
-         Infrastructure Layer (Google Keep)
+         Infrastructure Layer (Obsidian vault)
 ```
 
 **Key Characteristics:**
@@ -106,7 +106,7 @@ frontend/
 #### Settings View (`Settings.vue`)
 
 **Responsibilities:**
-- Configure Google Keep authentication
+- Configure Obsidian vault path
 - Display connection status
 - Provide environment variable instructions
 

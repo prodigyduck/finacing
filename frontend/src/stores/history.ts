@@ -12,8 +12,9 @@ export const useHistoryStore = defineStore('history', () => {
     error.value = null
     try {
       history.value = await fetchHistoryApi(year)
-    } catch (e: any) {
-      error.value = e?.response?.data?.detail || e?.message || 'Failed to fetch history'
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } }; message?: string }
+      error.value = err?.response?.data?.detail || err?.message || 'Failed to fetch history'
     } finally {
       loading.value = false
     }

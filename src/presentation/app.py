@@ -50,6 +50,7 @@ async def health_check():
 @app.get("/api/v1/history")
 async def get_history(year: Optional[int] = None):
     try:
+        parser.pull()
         history = parser.parse(year=year)
         return analyze_use_case.execute(history)
     except FileNotFoundError as e:

@@ -1,105 +1,115 @@
 <template>
-  <div class="dashboard">
-    <div class="top-bar">
+  <v-container fluid class="pa-6" style="max-width: 1200px;">
+    <!-- Top Bar -->
+    <div class="d-flex justify-space-between align-start mb-6">
       <div>
-        <h1 class="page-title">Portfolio</h1>
-        <p class="page-subtitle">Investment value history from Obsidian</p>
+        <div class="text-h4 font-weight-bold">Portfolio</div>
+        <div class="text-body-2 text-medium-emphasis mt-1">Investment value history from Obsidian</div>
       </div>
-      <div class="top-actions">
-        <span class="last-updated" v-if="lastUpdated">Updated {{ lastUpdated }}</span>
-        <button class="btn-refresh" @click="fetchData" :disabled="historyStore.loading">
-          <svg v-if="historyStore.loading" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin">
-            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-          </svg>
-          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-          </svg>
-          {{ historyStore.loading ? 'Fetching...' : 'Refresh' }}
-        </button>
+      <div class="d-flex align-center ga-3">
+        <span v-if="lastUpdated" class="text-caption text-medium-emphasis">Updated {{ lastUpdated }}</span>
+        <v-btn
+          color="primary"
+          variant="flat"
+          size="small"
+          :loading="historyStore.loading"
+          @click="fetchData"
+        >
+          <v-icon start>mdi-refresh</v-icon>
+          Refresh
+        </v-btn>
       </div>
     </div>
 
     <template v-if="historyStore.history && historyStore.history.record_count > 0">
-      <div class="metrics-row">
-        <div class="metric-card">
-          <span class="metric-label">Latest Value</span>
-          <span class="metric-value">{{ historyStore.history.latest?.amount.toFixed(2) }}억</span>
-        </div>
-        <div class="metric-card">
-          <span class="metric-label">Change</span>
-          <span class="metric-value" :class="changeClass">{{ formatChange(historyStore.history.total_change) }}</span>
-        </div>
-        <div class="metric-card">
-          <span class="metric-label">Return Rate</span>
-          <span class="metric-value" :class="changeClass">{{ formatRate(historyStore.history.return_rate) }}</span>
-        </div>
-        <div class="metric-card">
-          <span class="metric-label">Records</span>
-          <span class="metric-value">{{ historyStore.history.record_count }}</span>
-        </div>
-      </div>
+      <!-- Metrics -->
+      <v-row dense class="mb-6">
+        <v-col cols="6" md="3">
+          <v-card rounded="lg" variant="flat" class="pa-5">
+            <div class="text-overline text-medium-emphasis mb-1">Latest Value</div>
+            <div class="text-h4 font-weight-bold">{{ historyStore.history.latest?.amount.toFixed(2) }}</div>
+          </v-card>
+        </v-col>
+        <v-col cols="6" md="3">
+          <v-card rounded="lg" variant="flat" class="pa-5">
+            <div class="text-overline text-medium-emphasis mb-1">Change</div>
+            <div class="text-h4 font-weight-bold" :class="changeColor">
+              {{ formatChange(historyStore.history.total_change) }}
+            </div>
+          </v-card>
+        </v-col>
+        <v-col cols="6" md="3">
+          <v-card rounded="lg" variant="flat" class="pa-5">
+            <div class="text-overline text-medium-emphasis mb-1">Return Rate</div>
+            <div class="text-h4 font-weight-bold" :class="changeColor">
+              {{ formatRate(historyStore.history.return_rate) }}
+            </div>
+          </v-card>
+        </v-col>
+        <v-col cols="6" md="3">
+          <v-card rounded="lg" variant="flat" class="pa-5">
+            <div class="text-overline text-medium-emphasis mb-1">Records</div>
+            <div class="text-h4 font-weight-bold">{{ historyStore.history.record_count }}</div>
+          </v-card>
+        </v-col>
+      </v-row>
 
-      <div class="card chart-card">
-        <div class="card-header">
-          <h3>Portfolio Value Over Time</h3>
-        </div>
-        <div class="chart-body">
-          <LineChart :data="lineData" :projections="projectionsData" />
-        </div>
-      </div>
+      <!-- Chart -->
+      <v-card rounded="lg" variant="flat" class="mb-6 pa-4">
+        <v-card-title class="text-subtitle-1 font-weight-bold px-2">Portfolio Value Over Time</v-card-title>
+        <PortfolioChart :data="lineData" :projections="projectionsData" />
+      </v-card>
 
-      <div class="card">
-        <div class="card-header">
-          <h3>Daily Records</h3>
-        </div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th class="right">Value (억)</th>
-                <th class="right">Change</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(record, idx) in historyStore.history.records" :key="record.date">
-                <td>{{ formatDate(record.date) }}</td>
-                <td class="right">{{ record.amount.toFixed(2) }}</td>
-                <td class="right" :class="dailyChangeClass(idx)">{{ formatDailyChange(idx) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <!-- Table -->
+      <v-card rounded="lg" variant="flat">
+        <v-card-title class="text-subtitle-1 font-weight-bold pa-4 pb-0">Daily Records</v-card-title>
+        <v-table density="comfortable" class="mt-2">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th class="text-right">Value (억)</th>
+              <th class="text-right">Change</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(record, idx) in historyStore.history.records" :key="record.date">
+              <td>{{ formatDate(record.date) }}</td>
+              <td class="text-right font-weight-medium">{{ record.amount.toFixed(2) }}</td>
+              <td class="text-right" :class="dailyChangeColor(idx)">
+                {{ formatDailyChange(idx) }}
+              </td>
+            </tr>
+          </tbody>
+        </v-table>
+      </v-card>
     </template>
 
-    <div v-if="!historyStore.loading && (!historyStore.history || historyStore.history.record_count === 0)" class="card empty-state">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="1.5">
-        <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
-      </svg>
-      <h3>No data yet</h3>
-      <p>Click Refresh to fetch your investment data.</p>
-    </div>
+    <!-- Empty State -->
+    <v-card v-if="!historyStore.loading && (!historyStore.history || historyStore.history.record_count === 0)" rounded="lg" variant="flat" class="py-16 text-center">
+      <v-icon size="64" color="grey-lighten-1">mdi-chart-bar</v-icon>
+      <div class="text-h6 text-medium-emphasis mt-4">No data yet</div>
+      <div class="text-body-2 text-medium-emphasis">Click Refresh to fetch your investment data.</div>
+    </v-card>
 
-    <div v-if="historyStore.error" class="card error-state">
-      <p>{{ historyStore.error }}</p>
-    </div>
-  </div>
+    <!-- Error -->
+    <v-alert v-if="historyStore.error" type="error" variant="tonal" rounded="lg" class="mt-4">
+      {{ historyStore.error }}
+    </v-alert>
+  </v-container>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useHistoryStore } from '@/stores'
-import LineChart from '@/components/LineChart.vue'
+import PortfolioChart from '@/components/PortfolioChart.vue'
 
 const historyStore = useHistoryStore()
 const lastUpdated = ref<string | null>(null)
 
-const changeClass = computed(() => {
+const changeColor = computed(() => {
   const change = historyStore.history?.total_change
   if (change == null) return ''
-  return change > 0 ? 'positive' : change < 0 ? 'negative' : ''
+  return change > 0 ? 'text-success' : change < 0 ? 'text-error' : ''
 })
 
 const lineData = computed(() => {
@@ -107,9 +117,7 @@ const lineData = computed(() => {
   return historyStore.history.records.map(r => ({ date: r.date, value: r.amount }))
 })
 
-const projectionsData = computed(() => {
-  return historyStore.history?.projections ?? []
-})
+const projectionsData = computed(() => historyStore.history?.projections ?? [])
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr)
@@ -119,7 +127,7 @@ function formatDate(dateStr: string): string {
 function formatChange(change: number | null | undefined): string {
   if (change == null) return '-'
   const sign = change > 0 ? '+' : ''
-  return `${sign}${change.toFixed(2)}억`
+  return `${sign}${change.toFixed(2)}`
 }
 
 function formatRate(rate: number | null | undefined): string {
@@ -128,19 +136,15 @@ function formatRate(rate: number | null | undefined): string {
   return `${sign}${rate.toFixed(2)}%`
 }
 
-function dailyChangeClass(idx: number): string {
-  if (idx === 0) return ''
-  const records = historyStore.history?.records
-  if (!records) return ''
-  const diff = records[idx].amount - records[idx - 1].amount
-  return diff > 0 ? 'positive' : diff < 0 ? 'negative' : ''
+function dailyChangeColor(idx: number): string {
+  if (idx === 0 || !historyStore.history?.records) return ''
+  const diff = historyStore.history.records[idx].amount - historyStore.history.records[idx - 1].amount
+  return diff > 0 ? 'text-success font-weight-bold' : diff < 0 ? 'text-error font-weight-bold' : ''
 }
 
 function formatDailyChange(idx: number): string {
-  if (idx === 0) return '-'
-  const records = historyStore.history?.records
-  if (!records) return '-'
-  const diff = records[idx].amount - records[idx - 1].amount
+  if (idx === 0 || !historyStore.history?.records) return '-'
+  const diff = historyStore.history.records[idx].amount - historyStore.history.records[idx - 1].amount
   const sign = diff > 0 ? '+' : ''
   return `${sign}${diff.toFixed(2)}`
 }
@@ -150,71 +154,3 @@ async function fetchData() {
   lastUpdated.value = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
 }
 </script>
-
-<style scoped>
-.dashboard { max-width: 1100px; margin: 0 auto; }
-
-.top-bar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
-.page-title { font-size: 28px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; }
-.page-subtitle { font-size: 14px; color: var(--text-tertiary); margin-top: 4px; }
-.top-actions { display: flex; align-items: center; gap: 12px; }
-.last-updated { font-size: 13px; color: var(--text-tertiary); }
-
-.btn-refresh {
-  display: flex; align-items: center; gap: 6px; padding: 8px 16px;
-  background: var(--accent); color: white; border: none; border-radius: 8px;
-  font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.15s;
-}
-.btn-refresh:hover { opacity: 0.85; }
-.btn-refresh:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.spin { animation: spin 1s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.card {
-  background: var(--bg-card); border-radius: var(--radius);
-  box-shadow: var(--shadow-sm); border: 1px solid var(--border);
-}
-
-.metrics-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-
-.metric-card {
-  background: var(--bg-card); border-radius: var(--radius); padding: 20px 24px;
-  box-shadow: var(--shadow-sm); border: 1px solid var(--border);
-  display: flex; flex-direction: column; gap: 6px;
-}
-.metric-label { font-size: 13px; font-weight: 500; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px; }
-.metric-value { font-size: 28px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; }
-.metric-value.positive { color: var(--green); }
-.metric-value.negative { color: var(--red); }
-
-.chart-card { padding: 20px; margin-bottom: 24px; }
-.chart-card .card-header { margin-bottom: 16px; }
-.card-header h3 { font-size: 15px; font-weight: 600; color: var(--text-primary); }
-.chart-body { height: 320px; }
-
-.table-wrapper { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; }
-thead th {
-  padding: 12px 16px; font-size: 12px; font-weight: 600; color: var(--text-tertiary);
-  text-transform: uppercase; letter-spacing: 0.5px; text-align: left;
-  border-bottom: 1px solid var(--border);
-}
-thead th.right { text-align: right; }
-tbody td { padding: 14px 16px; font-size: 14px; border-bottom: 1px solid var(--border); }
-.right { text-align: right; }
-.positive { color: var(--green); font-weight: 600; }
-.negative { color: var(--red); font-weight: 600; }
-
-.empty-state, .error-state {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 60px 20px; gap: 12px;
-}
-.empty-state h3 { font-size: 17px; font-weight: 600; color: var(--text-secondary); }
-.empty-state p { font-size: 14px; color: var(--text-tertiary); }
-.error-state { color: var(--red); font-size: 14px; }
-
-@media (max-width: 768px) {
-  .metrics-row { grid-template-columns: repeat(2, 1fr); }
-}
-</style>

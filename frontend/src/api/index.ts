@@ -43,3 +43,42 @@ export async function syncVault(): Promise<{ status: string; detail: string }> {
   const { data } = await api.post('/api/v1/sync')
   return data
 }
+
+export interface RawRecord {
+  month: number
+  day: number
+  amount: string
+}
+
+export interface RawDataResponse {
+  year: number
+  frontmatter: string
+  records: RawRecord[]
+}
+
+export interface SaveRawDataResponse {
+  status: string
+  record_count: number
+  commit: string | null
+}
+
+export async function fetchRawData(year?: number): Promise<RawDataResponse> {
+  const params: Record<string, unknown> = {}
+  if (year) params.year = year
+  const { data } = await api.get<RawDataResponse>('/api/v1/raw-data', { params })
+  return data
+}
+
+export async function saveRawData(
+  year: number,
+  frontmatter: string,
+  records: RawRecord[],
+  commit = true,
+): Promise<SaveRawDataResponse> {
+  const { data } = await api.put<SaveRawDataResponse>(
+    '/api/v1/raw-data',
+    { year, frontmatter, records },
+    { params: { commit } },
+  )
+  return data
+}

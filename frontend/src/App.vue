@@ -9,6 +9,7 @@
       </div>
       <v-list density="compact" nav>
         <v-list-item to="/" prepend-icon="mdi-chart-line" title="Dashboard" exact />
+        <v-list-item to="/raw-data" prepend-icon="mdi-table-edit" title="Raw Data" exact />
       </v-list>
     </v-navigation-drawer>
 

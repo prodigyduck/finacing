@@ -30,8 +30,9 @@ ENV/
 .vscode/
 .idea/
 
-# Claude Code
+# Claude Code (keep settings.local.json)
 .claude/
+!.claude/settings.local.json
 *.swp
 *.swo
 
@@ -50,16 +51,19 @@ node_modules/
 htmlcov/
 *.cover
 .hypothesis/
+.playwright/
 
 # Type checking
 .mypy_cache/
 .dmypy.json
 dmypy.json
 
-# Logs & screenshots
+# Logs & temporary files
 *.log
-*.png
 .sisyphus/
+
+# Harness workspace (temporary code review artifacts)
+.claude/.workspace/
 
 # Sisyphus CI
 GLM

@@ -1,5 +1,5 @@
-import logging
 import io
+import logging
 
 
 def test_no_secrets_in_logs():

@@ -1,9 +1,9 @@
 from datetime import date
 from decimal import Decimal
 
+from src.application.use_cases.analyze_history import AnalyzeHistory
 from src.domain.entities.investment_record import InvestmentRecord
 from src.domain.entities.portfolio_history import PortfolioHistory
-from src.application.use_cases.analyze_history import AnalyzeHistory
 
 
 def _record(month: int, day: int, amount: float) -> InvestmentRecord:

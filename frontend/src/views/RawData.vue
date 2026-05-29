@@ -4,7 +4,7 @@
     <div class="d-flex justify-space-between align-start mb-6">
       <div>
         <div class="text-h4 font-weight-bold">Raw Data</div>
-        <div class="text-body-2 text-medium-emphasis mt-1">Edit investment records in 투자.md</div>
+        <div class="text-body-2 text-medium-emphasis mt-1">투자.md의 기록을 편집하세요</div>
       </div>
       <div class="d-flex align-center ga-3">
         <v-select
@@ -24,16 +24,6 @@
         >
           <v-icon start>mdi-source-branch-sync</v-icon>
           Git Pull
-        </v-btn>
-        <v-btn
-          color="primary"
-          variant="flat"
-          size="small"
-          :loading="rawDataStore.saving"
-          @click="handleSave"
-        >
-          <v-icon start>mdi-content-save</v-icon>
-          Save
         </v-btn>
       </div>
     </div>
@@ -91,6 +81,16 @@
         <v-btn variant="text" prepend-icon="mdi-plus" @click="addRow">
           Add Record
         </v-btn>
+        <v-spacer />
+        <v-btn
+          color="primary"
+          variant="flat"
+          :loading="rawDataStore.saving"
+          @click="handleSave"
+        >
+          <v-icon start>mdi-content-save</v-icon>
+          저장
+        </v-btn>
       </v-card-actions>
     </v-card>
 
@@ -114,8 +114,11 @@
 
 <script setup lang="ts">
 import { ref, reactive, watch, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useRawDataStore } from '@/stores'
 import type { RawRecord } from '@/api'
+
+const router = useRouter()
 
 interface Row {
   month: number
@@ -229,9 +232,14 @@ async function handleSave() {
 
   const result = await rawDataStore.saveRawData()
   if (result) {
-    snackbarText.value = `Saved ${result.record_count} records${result.commit ? ` (${result.commit})` : ''}`
+    snackbarText.value = `${result.record_count}개 기록을 저장했어요`
     snackbarColor.value = 'success'
     snackbar.value = true
+
+    // Auto-redirect to Dashboard after successful save
+    setTimeout(() => {
+      router.push('/')
+    }, 1500)
   }
 }
 </script>

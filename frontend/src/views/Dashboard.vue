@@ -31,6 +31,27 @@
     </div>
 
     <template v-if="historyStore.history && historyStore.history.record_count > 0">
+      <!-- Time Period Selector -->
+      <div class="d-flex justify-end mb-4">
+        <v-btn-toggle
+          v-model="timePeriod"
+          mandatory
+          color="primary"
+          variant="outlined"
+          density="compact"
+          class="rounded-lg"
+        >
+          <v-btn value="daily" class="text-caption">
+            일간
+          </v-btn>
+          <v-btn value="weekly" class="text-caption">
+            주간
+          </v-btn>
+          <v-btn value="monthly" class="text-caption">
+            월간
+          </v-btn>
+        </v-btn-toggle>
+      </div>
       <!-- Metrics -->
       <v-row dense class="mb-6">
         <v-col cols="6" md="3">
@@ -65,27 +86,31 @@
 
       <!-- Chart -->
       <v-card rounded="lg" variant="flat" class="mb-6 pa-4">
-        <v-card-title class="text-subtitle-1 font-weight-bold px-2">Portfolio Value Over Time</v-card-title>
-        <PortfolioChart :data="lineData" :projections="projectionsData" />
+        <v-card-title class="text-subtitle-1 font-weight-bold px-2">
+          포트폴리오 추이 ({{ timePeriodLabel }})
+        </v-card-title>
+        <PortfolioChart :data="lineData" :projections="timePeriod === 'daily' ? projectionsData : []" />
       </v-card>
 
       <!-- Table -->
       <v-card rounded="lg" variant="flat">
-        <v-card-title class="text-subtitle-1 font-weight-bold pa-4 pb-0">Daily Records</v-card-title>
+        <v-card-title class="text-subtitle-1 font-weight-bold pa-4 pb-0">
+          {{ timePeriodLabel }} 기록
+        </v-card-title>
         <v-table density="comfortable" class="mt-2">
           <thead>
             <tr>
-              <th>Date</th>
-              <th class="text-right">Value (억)</th>
-              <th class="text-right">Change</th>
+              <th>날짜</th>
+              <th class="text-right">금액 (억)</th>
+              <th class="text-right">변동</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(record, idx) in historyStore.history.records" :key="record.date">
-              <td>{{ formatDate(record.date) }}</td>
-              <td class="text-right font-weight-medium">{{ record.amount.toFixed(2) }}</td>
-              <td class="text-right" :class="dailyChangeColor(idx)">
-                {{ formatDailyChange(idx) }}
+            <tr v-for="(record, idx) in aggregatedData" :key="record.date">
+              <td>{{ formatAggregateDate(record.date) }}</td>
+              <td class="text-right font-weight-medium">{{ record.value.toFixed(2) }}</td>
+              <td class="text-right" :class="aggregateChangeColor(idx)">
+                {{ formatAggregateChange(idx) }}
               </td>
             </tr>
           </tbody>
@@ -95,25 +120,112 @@
 
     <!-- Empty State -->
     <v-card v-if="!historyStore.loading && (!historyStore.history || historyStore.history.record_count === 0)" rounded="lg" variant="flat" class="py-16 text-center">
-      <v-icon size="64" color="grey-lighten-1">mdi-chart-bar</v-icon>
-      <div class="text-h6 text-medium-emphasis mt-4">No data yet</div>
-      <div class="text-body-2 text-medium-emphasis">Click Refresh to fetch your investment data.</div>
+      <v-icon size="64" color="text-disabled">mdi-chart-bar</v-icon>
+      <div class="text-h6 text-secondary mt-4">데이터가 없습니다</div>
+      <div class="text-body-2 text-tertiary mb-6">Obsidian 투자.md 파일에서 데이터를 가져오세요</div>
+      <v-btn color="primary" variant="flat" @click="syncAndFetch">
+        <v-icon start>mdi-source-branch-sync</v-icon>
+        Git Pull로 데이터 가져오기
+      </v-btn>
     </v-card>
 
     <!-- Error -->
-    <v-alert v-if="historyStore.error" type="error" variant="tonal" rounded="lg" class="mt-4">
-      {{ historyStore.error }}
+    <v-alert v-if="historyStore.error" type="error" variant="tonal" rounded="lg" class="mt-4" closable>
+      <template v-slot:title>
+        <span class="text-subtitle-2">데이터를 불러오지 못했어요</span>
+      </template>
+      <div class="text-body-2 mt-1">{{ userFriendlyError }}</div>
+      <template v-slot:actions>
+        <v-btn variant="text" @click="fetchData">다시 시도</v-btn>
+        <v-btn variant="text" @click="syncAndFetch">Git Pull</v-btn>
+      </template>
     </v-alert>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useHistoryStore } from '@/stores'
 import PortfolioChart from '@/components/PortfolioChart.vue'
 
 const historyStore = useHistoryStore()
 const lastUpdated = ref<string | null>(null)
+
+// Time period selection: 'daily' | 'weekly' | 'monthly'
+const timePeriod = ref<'daily' | 'weekly' | 'monthly'>('daily')
+
+// Auto-fetch on mount
+onMounted(async () => {
+  await fetchData()
+})
+
+// Aggregate data based on time period
+const aggregatedData = computed(() => {
+  if (!historyStore.history?.records) return []
+
+  const records = [...historyStore.history.records] // Copy to avoid mutation
+
+  if (timePeriod.value === 'daily') {
+    return records.map(r => ({ date: r.date, value: r.amount }))
+  }
+
+  if (timePeriod.value === 'weekly') {
+    return aggregateByWeek(records)
+  }
+
+  if (timePeriod.value === 'monthly') {
+    return aggregateByMonth(records)
+  }
+
+  return records.map(r => ({ date: r.date, value: r.amount }))
+})
+
+// Weekly aggregation: get last value of each week
+function aggregateByWeek(records: Array<{ date: string; amount: number }>) {
+  const weeks: Map<string, number> = new Map()
+
+  for (const record of records) {
+    const date = new Date(record.date)
+    const year = date.getFullYear()
+    const week = getWeekNumber(date)
+    const key = `${year}-W${week}`
+
+    // Use the last value of the week (most recent)
+    weeks.set(key, record.amount)
+  }
+
+  return Array.from(weeks.entries()).map(([key, value]) => ({
+    date: key,
+    value,
+  }))
+}
+
+// Monthly aggregation: get last value of each month
+function aggregateByMonth(records: Array<{ date: string; amount: number }>) {
+  const months: Map<string, number> = new Map()
+
+  for (const record of records) {
+    const date = new Date(record.date)
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+
+    // Use the last value of the month (most recent)
+    months.set(key, record.amount)
+  }
+
+  return Array.from(months.entries()).map(([key, value]) => ({
+    date: key,
+    value,
+  }))
+}
+
+// Get ISO week number
+function getWeekNumber(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  const dayNum = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+}
 
 const changeColor = computed(() => {
   const change = historyStore.history?.total_change
@@ -121,12 +233,35 @@ const changeColor = computed(() => {
   return change > 0 ? 'text-success' : change < 0 ? 'text-error' : ''
 })
 
-const lineData = computed(() => {
-  if (!historyStore.history?.records) return []
-  return historyStore.history.records.map(r => ({ date: r.date, value: r.amount }))
+const userFriendlyError = computed(() => {
+  const error = historyStore.error
+  if (!error) return ''
+
+  if (error.includes('fetch') || error.includes('network')) {
+    return '인터넷 연결을 확인하거나 나중에 다시 시도하세요'
+  }
+  if (error.includes('git') || error.includes('pull')) {
+    return 'Git 동기화에 실패했습니다. Obsidian 경로를 확인하세요'
+  }
+  if (error.includes('parse') || error.includes('format')) {
+    return '투자.md 파일 형식을 확인하세요 (M.DD 억 형식)'
+  }
+  return '문제가 발생했습니다. 다시 시도해주세요'
 })
 
+const lineData = computed(() => aggregatedData.value)
+
 const projectionsData = computed(() => historyStore.history?.projections ?? [])
+
+// Time period label for display
+const timePeriodLabel = computed(() => {
+  switch (timePeriod.value) {
+    case 'daily': return '일간'
+    case 'weekly': return '주간'
+    case 'monthly': return '월간'
+    default: return '일간'
+  }
+})
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr)
@@ -154,6 +289,48 @@ function dailyChangeColor(idx: number): string {
 function formatDailyChange(idx: number): string {
   if (idx === 0 || !historyStore.history?.records) return '-'
   const diff = historyStore.history.records[idx].amount - historyStore.history.records[idx - 1].amount
+  const sign = diff > 0 ? '+' : ''
+  return `${sign}${diff.toFixed(2)}`
+}
+
+// Functions for aggregated data display
+function formatAggregateDate(dateStr: string): string {
+  if (timePeriod.value === 'daily') {
+    const d = new Date(dateStr)
+    return `${d.getMonth() + 1}/${d.getDate()}`
+  }
+  if (timePeriod.value === 'weekly') {
+    // Format: 2024-W15
+    const match = dateStr.match(/(\d+)-W(\d+)/)
+    if (match) {
+      const year = match[1]
+      const week = match[2]
+      return `${year.slice(2)}/${week}주`
+    }
+    return dateStr
+  }
+  if (timePeriod.value === 'monthly') {
+    // Format: 2024-05
+    const parts = dateStr.split('-')
+    if (parts.length === 2) {
+      const year = parts[0]
+      const month = parts[1]
+      return `${year.slice(2)}/${month}월`
+    }
+    return dateStr
+  }
+  return dateStr
+}
+
+function aggregateChangeColor(idx: number): string {
+  if (idx === 0 || !aggregatedData.value) return ''
+  const diff = aggregatedData.value[idx].value - aggregatedData.value[idx - 1].value
+  return diff > 0 ? 'text-success font-weight-bold' : diff < 0 ? 'text-error font-weight-bold' : ''
+}
+
+function formatAggregateChange(idx: number): string {
+  if (idx === 0 || !aggregatedData.value) return '-'
+  const diff = aggregatedData.value[idx].value - aggregatedData.value[idx - 1].value
   const sign = diff > 0 ? '+' : ''
   return `${sign}${diff.toFixed(2)}`
 }

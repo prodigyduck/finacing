@@ -16,9 +16,9 @@ const chartRef = ref<HTMLDivElement>()
 let chart: echarts.ECharts | null = null
 
 const TREND_COLORS: Record<number, string> = {
-  3: '#34C759',
-  6: '#FF9500',
-  12: '#FF3B30',
+  3: '#90EE90',  // Light green
+  6: '#FFD700',  // Gold
+  12: '#FF6B6B', // Light red
 }
 
 function fmtLabel(dateStr: string): string {
@@ -46,12 +46,12 @@ function render() {
       smooth: 0.3,
       symbol: 'circle',
       symbolSize: 6,
-      lineStyle: { color: '#007AFF', width: 2.5 },
-      itemStyle: { color: '#007AFF', borderColor: '#fff', borderWidth: 2 },
+      lineStyle: { color: '#00BFFF', width: 2.5 },
+      itemStyle: { color: '#00BFFF', borderColor: '#fff', borderWidth: 2 },
       areaStyle: {
         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: 'rgba(0,122,255,0.18)' },
-          { offset: 1, color: 'rgba(0,122,255,0)' },
+          { offset: 0, color: 'rgba(0,191,255,0.18)' },
+          { offset: 1, color: 'rgba(0,191,255,0)' },
         ]),
       },
     },

@@ -1,6 +1,7 @@
-import pytest
 from datetime import date
 from decimal import Decimal
+
+import pytest
 
 from src.domain.entities.investment_record import InvestmentRecord
 

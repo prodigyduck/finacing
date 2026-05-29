@@ -1,24 +1,37 @@
-from fastapi import FastAPI, HTTPException, Query, status
-from pydantic import BaseModel, field_validator
 import datetime
 import logging
-from fastapi.middleware.cors import CORSMiddleware
+import os
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from decimal import Decimal
 from typing import Optional
 
+from fastapi import FastAPI, Header, HTTPException, Query, status
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, field_validator
+from typing_extensions import TypedDict
+
+from src.application.use_cases.analyze_history import AnalyzeHistory
 from src.config.logging import configure_logging
 from src.infrastructure.parsers.obsidian_parser import ObsidianParser
-from src.application.use_cases.analyze_history import AnalyzeHistory
 
 logger = logging.getLogger(__name__)
 
 parser = ObsidianParser()
 analyze_use_case = AnalyzeHistory()
 
+# Simple API key for local development (override with FINANCING_API_KEY env var)
+API_KEY = os.environ.get("FINANCING_API_KEY", "local-dev-only")
+
+
+async def verify_api_key(x_api_key: str = Header(...)):
+    """Verify API key for write operations."""
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid API key")
+
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[FastAPI]:
     configure_logging()
     yield
 
@@ -32,14 +45,15 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=["http://localhost:5180", "http://127.0.0.1:5180"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT"],
     allow_headers=["*"],
 )
 
 
 # --- Schemas ---
+
 
 class RawRecord(BaseModel):
     month: int
@@ -55,16 +69,32 @@ class RawRecord(BaseModel):
 
     @field_validator("day")
     @classmethod
-    def validate_day(cls, v: int) -> int:
+    def validate_day(cls, v: int, info) -> int:
         if not 1 <= v <= 31:
             raise ValueError("day must be 1-31")
+
+        # Validate month-specific max day
+        month = info.data.get("month")
+        if month is not None:
+            import calendar
+
+            max_day = calendar.monthrange(2024, month)[1]  # Use leap year for safety
+            if v > max_day:
+                raise ValueError(f"day must be 1-{max_day} for month {month}")
         return v
 
     @field_validator("amount")
     @classmethod
     def validate_amount(cls, v: str) -> str:
-        Decimal(v)
-        return v
+        from decimal import InvalidOperation
+
+        try:
+            result = Decimal(v)
+            if result < 0:
+                raise ValueError("amount must be non-negative")
+        except (ValueError, TypeError, InvalidOperation) as e:
+            raise ValueError(f"amount must be a valid non-negative number: {v}") from e
+        return str(result)  # Return normalized format
 
 
 class RawDataRequest(BaseModel):
@@ -73,13 +103,24 @@ class RawDataRequest(BaseModel):
     records: list[RawRecord]
 
 
+class RootResponse(TypedDict):
+    message: str
+    version: str
+    docs: str
+
+
+class HealthResponse(TypedDict):
+    status: str
+    timestamp: str
+
+
 @app.get("/")
-async def root():
+async def root() -> RootResponse:
     return {"message": "Financing API", "version": "2.0.0", "docs": "/docs"}
 
 
 @app.get("/health")
-async def health_check():
+async def health_check() -> HealthResponse:
     return {"status": "healthy", "timestamp": datetime.datetime.now().isoformat()}
 
 
@@ -92,7 +133,7 @@ async def sync_vault():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Git pull failed: {str(e)}",
-        )
+        ) from e
 
 
 @app.get("/api/v1/history")
@@ -102,12 +143,12 @@ async def get_history(year: Optional[int] = None):
         history = parser.parse(year=year)
         return analyze_use_case.execute(history)
     except FileNotFoundError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to parse investment data: {str(e)}",
-        )
+        ) from e
 
 
 @app.get("/api/v1/raw-data")
@@ -115,16 +156,23 @@ async def get_raw_data(year: Optional[int] = None):
     try:
         return parser.read_raw(year=year)
     except FileNotFoundError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to read raw data: {str(e)}",
-        )
+        ) from e
 
 
 @app.put("/api/v1/raw-data")
-async def put_raw_data(request: RawDataRequest, commit: bool = Query(default=True)):
+async def put_raw_data(
+    request: RawDataRequest,
+    commit: bool = Query(default=True, description="Git commit 여부"),
+    x_api_key: str = Header(...),
+):
+    # Verify API key
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid API key")
     try:
         parser.write_raw(
             year=request.year,
@@ -138,17 +186,17 @@ async def put_raw_data(request: RawDataRequest, commit: bool = Query(default=Tru
             )
         return {"status": "saved", "record_count": len(request.records), "commit": commit_hash}
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)) from e
     except FileNotFoundError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to save raw data: {str(e)}",
-        )
+        ) from e
 
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run(app, host="127.0.0.1", port=8000, reload=False)

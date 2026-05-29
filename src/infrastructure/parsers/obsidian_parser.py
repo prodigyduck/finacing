@@ -1,12 +1,12 @@
 import calendar
+import logging
 import os
 import re
 import subprocess
-import logging
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional, Tuple
 
 from src.domain.entities.investment_record import InvestmentRecord
 from src.domain.entities.portfolio_history import PortfolioHistory
@@ -20,7 +20,10 @@ class ObsidianParser:
     def __init__(self, vault_path: Optional[str] = None, investment_file: str = "투자/투자.md"):
         if vault_path is None:
             vault_path = os.environ.get("OBSIDIAN_VAULT_PATH", os.path.expanduser("~/git/obsidian"))
-        self.vault_path = Path(vault_path).expanduser()
+        vault_path = Path(vault_path).expanduser().resolve()
+        if not vault_path.is_dir():
+            raise ValueError(f"Invalid vault path: {vault_path}")
+        self.vault_path = vault_path
         self.investment_file = investment_file
 
     def pull(self) -> str:
@@ -61,7 +64,7 @@ class ObsidianParser:
         text = filepath.read_text(encoding="utf-8")
         frontmatter, body = self._split_frontmatter(text)
 
-        records: list[dict] = []
+        records: List[dict] = []
         for line in body.splitlines():
             m = _PATTERN.match(line.strip())
             if not m:
@@ -76,9 +79,9 @@ class ObsidianParser:
 
         return {"year": year, "frontmatter": frontmatter, "records": records}
 
-    def write_raw(self, year: int, frontmatter: str, records: list[dict]) -> None:
+    def write_raw(self, year: int, frontmatter: str, records: List[dict]) -> None:
         """Write structured records back to the markdown file."""
-        validated: list[tuple[int, int, str]] = []
+        validated: List[Tuple[int, int, str]] = []
         for r in records:
             month = r["month"]
             day = r["day"]
@@ -93,7 +96,7 @@ class ObsidianParser:
 
         validated.sort(key=lambda x: (x[0], x[1]))
 
-        lines: list[str] = []
+        lines: List[str] = []
         if frontmatter.strip():
             lines.append(frontmatter.rstrip())
             lines.append("")
@@ -137,7 +140,7 @@ class ObsidianParser:
             logger.warning(f"Git commit failed: {e}")
             return None
 
-    def _split_frontmatter(self, text: str) -> tuple[str, str]:
+    def _split_frontmatter(self, text: str) -> Tuple[str, str]:
         """Split text into (frontmatter_block, body)."""
         if not text.startswith("---"):
             return "", text
@@ -146,11 +149,11 @@ class ObsidianParser:
             return "", text
         return text[: end + 3], text[end + 3 :].lstrip("\n")
 
-    def _parse_records(self, text: str, year: Optional[int] = None) -> list[InvestmentRecord]:
+    def _parse_records(self, text: str, year: Optional[int] = None) -> List[InvestmentRecord]:
         if year is None:
             year = date.today().year
 
-        records: list[InvestmentRecord] = []
+        records: List[InvestmentRecord] = []
         for line in text.splitlines():
             m = _PATTERN.match(line.strip())
             if not m:

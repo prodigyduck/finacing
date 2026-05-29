@@ -1,10 +1,10 @@
-from datetime import date, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import timedelta
+from typing import Any, Dict, List, Optional, Tuple
 
 from src.domain.entities.portfolio_history import PortfolioHistory
 
 
-def _linear_regression(records: list) -> Optional[tuple]:
+def _linear_regression(records: List) -> Optional[Tuple[float, float]]:
     """Return (slope_per_day, intercept) via least-squares on day offsets."""
     if len(records) < 2:
         return None

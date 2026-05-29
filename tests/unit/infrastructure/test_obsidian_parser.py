@@ -1,5 +1,6 @@
-import pytest
 from decimal import Decimal
+
+import pytest
 
 from src.infrastructure.parsers.obsidian_parser import ObsidianParser
 
@@ -59,6 +60,5 @@ some random text
         assert records[0].date.month == 1
 
     def test_file_not_found(self):
-        parser = ObsidianParser(vault_path="/nonexistent/path")
-        with pytest.raises(FileNotFoundError):
-            parser.parse()
+        with pytest.raises(ValueError, match="Invalid vault path"):
+            ObsidianParser(vault_path="/nonexistent/path")

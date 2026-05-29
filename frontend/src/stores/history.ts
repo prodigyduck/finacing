@@ -27,13 +27,13 @@ export const useHistoryStore = defineStore('history', () => {
     error.value = null
     try {
       await syncVaultApi()
-      await fetchHistory()
     } catch (e: unknown) {
       const err = e as { response?: { data?: { detail?: string } }; message?: string }
       error.value = err?.response?.data?.detail || err?.message || 'Sync failed'
-    } finally {
-      syncing.value = false
     }
+    // Always fetch history, even if sync fails
+    await fetchHistory()
+    syncing.value = false
   }
 
   return { history, loading, syncing, error, fetchHistory, syncAndFetch }

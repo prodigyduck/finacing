@@ -130,12 +130,12 @@ function render() {
       axisTick: { show: false },
       axisLabel: {
         fontFamily: 'Inter',
-        fontSize: 10,  // Smaller font for more space
+        fontSize: 9,   // Even smaller
         color: '#8E8E93',
-        // Always show all labels, rely on rotation and font size to prevent overlap
-        interval: 0,
-        // Rotate based on data density
-        rotate: allLabels.length > 50 ? 45 : allLabels.length > 30 ? 30 : 0,
+        // Smart interval: show labels based on data density
+        interval: allLabels.length > 100 ? 4 : allLabels.length > 60 ? 2 : 0,
+        // Rotate vertically for very dense data
+        rotate: allLabels.length > 60 ? 90 : allLabels.length > 40 ? 45 : 30,
         formatter: (value: string) => value,
       },
     },

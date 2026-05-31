@@ -4,6 +4,18 @@ from typing import Any, Dict, List, Optional, Tuple
 from src.domain.entities.portfolio_history import PortfolioHistory
 
 
+class ParserPort:
+    """Input port for parser operations (Interface)."""
+
+    def pull(self) -> str:
+        """Pull latest data from remote."""
+        raise NotImplementedError
+
+    def parse(self, year: Optional[int] = None) -> PortfolioHistory:
+        """Parse investment data from source."""
+        raise NotImplementedError
+
+
 def _linear_regression(records: List) -> Optional[Tuple[float, float]]:
     """Return (slope_per_day, intercept) via least-squares on day offsets."""
     if len(records) < 2:
@@ -25,7 +37,24 @@ def _linear_regression(records: List) -> Optional[Tuple[float, float]]:
 
 
 class AnalyzeHistory:
-    def execute(self, history: PortfolioHistory) -> Dict[str, Any]:
+    def __init__(self, parser: Optional[ParserPort] = None):
+        """Initialize with optional parser dependency.
+
+        If parser is provided, execute() will call parser.parse() first.
+        Otherwise, execute() expects a PortfolioHistory argument.
+        """
+        self.parser = parser
+
+    def execute(self, history: Optional[PortfolioHistory] = None, year: Optional[int] = None) -> Dict[str, Any]:
+        """Execute analysis.
+
+        If parser was provided during init, history can be None and will be fetched.
+        Otherwise, history must be provided.
+        """
+        if self.parser and history is None:
+            history = self.parser.parse(year=year)
+        elif history is None:
+            raise ValueError("Either provide parser during init or pass history argument")
         latest = history.latest()
         earliest = history.earliest()
 

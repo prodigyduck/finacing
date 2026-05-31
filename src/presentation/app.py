@@ -11,14 +11,32 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
 from typing_extensions import TypedDict
 
-from src.application.use_cases.analyze_history import AnalyzeHistory
+from src.application.use_cases.analyze_history import AnalyzeHistory, ParserPort
 from src.config.logging import configure_logging
 from src.infrastructure.parsers.obsidian_parser import ObsidianParser
 
 logger = logging.getLogger(__name__)
 
-parser = ObsidianParser()
-analyze_use_case = AnalyzeHistory()
+# --- Dependency Injection ---
+
+def get_parser() -> ParserPort:
+    """Factory function to create parser instance.
+
+    In production, returns real ObsidianParser.
+    In tests, can be mocked via patching.
+    """
+    return ObsidianParser()
+
+
+def get_analyze_use_case() -> AnalyzeHistory:
+    """Factory function to create AnalyzeHistory with injected parser."""
+    parser = get_parser()
+    return AnalyzeHistory(parser=parser)
+
+
+# Create instances
+parser = get_parser()
+analyze_use_case = get_analyze_use_case()
 
 # Simple API key for local development (override with FINANCING_API_KEY env var)
 API_KEY = os.environ.get("FINANCING_API_KEY", "local-dev-only")

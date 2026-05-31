@@ -132,9 +132,10 @@ function render() {
         fontFamily: 'Inter',
         fontSize: 11,
         color: '#8E8E93',
-        // Dynamic interval and rotation based on data density
-        interval: allLabels.length > 30 ? 'auto' : 0,
-        rotate: allLabels.length > 20 ? 30 : 0,
+        // Show all labels for up to ~1 year of data (52-60 items)
+        // Rotate for dense data to prevent overlap
+        interval: allLabels.length > 60 ? 'auto' : 0,
+        rotate: allLabels.length > 40 ? 30 : 0,
         formatter: (value: string) => value,
       },
     },

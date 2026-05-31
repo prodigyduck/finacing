@@ -132,12 +132,10 @@ function render() {
         fontFamily: 'Inter',
         fontSize: 11,
         color: '#8E8E93',
-        interval: 0,  // Show all labels
-        rotate: 0,    // No rotation (horizontal)
-        formatter: (value: string, index: number) => {
-          // Show all labels - if data is dense, ECharts will handle overlap
-          return value
-        },
+        // Dynamic interval and rotation based on data density
+        interval: allLabels.length > 30 ? 'auto' : 0,
+        rotate: allLabels.length > 20 ? 30 : 0,
+        formatter: (value: string) => value,
       },
     },
     yAxis: {

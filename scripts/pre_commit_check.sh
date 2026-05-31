@@ -1,8 +1,19 @@
 #!/bin/bash
 # Pre-commit smoke test for Financing project
 # Runs before every commit to verify Obsidian data, backend, and frontend
+# Skip with: SKIP_PRE_COMMIT_CHECK=1 git commit ...
 
 set -euo pipefail
+
+# Allow skipping with environment variable
+if [ "${SKIP_PRE_COMMIT_CHECK:-0}" = "1" ]; then
+    echo "⏭️  Pre-commit check skipped (SKIP_PRE_COMMIT_CHECK=1)"
+    exit 0
+fi
+
+# Allow making checks non-blocking with environment variable
+# If set to "warn", failures will warn but not block commit
+BLOCK_MODE="${PRE_COMMIT_BLOCK_MODE:-block}"  # Options: block, warn
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -93,9 +104,15 @@ echo "========================================"
 
 if [ "$FAIL" -gt 0 ]; then
     echo ""
-    echo "검증 실패. 커밋을 중단합니다."
-    echo "   실패 항목을 수정한 후 다시 커밋하세요."
-    exit 1
+    if [ "$BLOCK_MODE" = "warn" ]; then
+        echo "⚠️  일부 검증 실패 (warn 모드 - 커밋 진행)"
+        echo "   실패 항목을 확인하세요."
+    else
+        echo "검증 실패. 커밋을 중단합니다."
+        echo "   실패 항목을 수정한 후 다시 커밋하세요."
+        echo "   또는 우회: SKIP_PRE_COMMIT_CHECK=1 git commit ..."
+        exit 1
+    fi
 fi
 
 echo ""

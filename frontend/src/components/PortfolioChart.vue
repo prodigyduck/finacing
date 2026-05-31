@@ -22,8 +22,29 @@ const TREND_COLORS: Record<number, string> = {
 }
 
 function fmtLabel(dateStr: string): string {
+  // Check if it's a weekly format (e.g., "2026-W15")
+  const weekMatch = dateStr.match(/(\d+)-W(\d+)/)
+  if (weekMatch) {
+    const year = weekMatch[1]
+    const week = weekMatch[2]
+    return `${year.slice(2)}/${week}주`  // "26/15주"
+  }
+
+  // Check if it's a monthly format (e.g., "2026-05")
+  const monthMatch = dateStr.match(/(\d+)-(\d+)/)
+  if (monthMatch && monthMatch[1].length === 4) {
+    const year = monthMatch[1]
+    const month = monthMatch[2]
+    return `${year.slice(2)}/${month}월`  // "26/05월"
+  }
+
+  // Daily format (ISO date string)
   const d = new Date(dateStr)
-  return `${d.getMonth() + 1}/${d.getDate()}`
+  if (!isNaN(d.getTime())) {
+    return `${d.getMonth() + 1}/${d.getDate()}`  // "5/15"
+  }
+
+  return dateStr  // Fallback
 }
 
 function render() {

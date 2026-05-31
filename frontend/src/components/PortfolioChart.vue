@@ -128,7 +128,17 @@ function render() {
       data: allLabels,
       axisLine: { lineStyle: { color: '#e0e0e0' } },
       axisTick: { show: false },
-      axisLabel: { fontFamily: 'Inter', fontSize: 11, color: '#8E8E93' },
+      axisLabel: {
+        fontFamily: 'Inter',
+        fontSize: 11,
+        color: '#8E8E93',
+        interval: 0,  // Show all labels
+        rotate: 0,    // No rotation (horizontal)
+        formatter: (value: string, index: number) => {
+          // Show all labels - if data is dense, ECharts will handle overlap
+          return value
+        },
+      },
     },
     yAxis: {
       type: 'value',

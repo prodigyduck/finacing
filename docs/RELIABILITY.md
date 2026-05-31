@@ -21,42 +21,49 @@ This document outlines reliability practices, patterns, and strategies for the F
 Wrap potentially failing operations in try-except blocks with fallback behavior.
 
 ```python
-# ✅ Good: Graceful degradation
-def fetch_investment_data(label: str) -> List[InvestmentAsset]:
+# Good: Graceful degradation for file I/O
+def fetch_investment_data(vault_path: Path) -> List[InvestmentRecord]:
     try:
-        notes = keep.find(labels=[label])
-        return [parse_note(note) for note in notes]
-    except gkeepapi.APIException:
-        st.warning("Failed to fetch live data. Using cached data.")
+        content = vault_path.read_text(encoding="utf-8")
+        records = parse_lines(content)
+        return records
+    except FileNotFoundError:
+        logger.warning("Vault file not found. Returning cached data.")
+        return load_cached_data()
+    except PermissionError:
+        logger.warning("Cannot read vault file. Returning cached data.")
+        return load_cached_data()
+    except UnicodeDecodeError:
+        logger.warning("Vault file encoding error. Returning cached data.")
         return load_cached_data()
     except Exception as e:
-        logger.error(f"Unexpected error: {e}")
+        logger.error(f"Unexpected error reading vault: {e}")
         return []
 
-# ❌ Bad: No error handling
-def fetch_investment_data(label: str) -> List[InvestmentAsset]:
-    notes = keep.find(labels=[label])  # May crash
-    return [parse_note(note) for note in notes]
+# Bad: No error handling
+def fetch_investment_data(vault_path: Path) -> List[InvestmentRecord]:
+    content = vault_path.read_text(encoding="utf-8")  # May crash
+    return parse_lines(content)
 ```
 
-### 2. Retry Logic
+### 2. Retry Logic for File I/O
 
-Implement retry logic for transient failures (network issues, API rate limits).
+Implement retry logic for transient file system failures (file locks, concurrent access).
 
 ```python
-# ✅ Good: Retry with exponential backoff
+# Good: Retry with exponential backoff
 import time
 from functools import wraps
 
-def retry(max_attempts=3, delay=1):
-    """Decorator for retry logic"""
+def retry(max_attempts=3, delay=0.5):
+    """Decorator for retry logic on file operations"""
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
             for attempt in range(max_attempts):
                 try:
                     return func(*args, **kwargs)
-                except Exception as e:
+                except (IOError, OSError) as e:
                     if attempt == max_attempts - 1:
                         raise
                     time.sleep(delay * (2 ** attempt))
@@ -64,37 +71,38 @@ def retry(max_attempts=3, delay=1):
         return wrapper
     return decorator
 
-@retry(max_attempts=3, delay=1)
-def fetch_with_retry(label: str) -> List[InvestmentAsset]:
-    return keep.find(labels=[label])
+@retry(max_attempts=3, delay=0.5)
+def read_vault_file(path: Path) -> str:
+    """Read vault file with retry on transient errors"""
+    return path.read_text(encoding="utf-8")
 ```
 
 ### 3. Timeout Handling
 
-Set timeouts for network operations to prevent hanging.
+Set timeouts for file read operations to prevent hanging on large files or network-mounted drives.
 
 ```python
-# ✅ Good: Timeout handling
+# Good: Timeout handling for file reads
 import signal
 
 class TimeoutError(Exception):
     pass
 
 def timeout_handler(signum, frame):
-    raise TimeoutError("Operation timed out")
+    raise TimeoutError("File read timed out")
 
-def fetch_with_timeout(label: str, timeout_seconds=30):
-    """Fetch data with timeout"""
+def read_with_timeout(path: Path, timeout_seconds=10):
+    """Read file with timeout"""
     signal.signal(signal.SIGALRM, timeout_handler)
     signal.alarm(timeout_seconds)
 
     try:
-        result = keep.find(labels=[label])
+        result = path.read_text(encoding="utf-8")
         signal.alarm(0)  # Disable alarm
         return result
     except TimeoutError:
-        st.error("Operation timed out. Please try again.")
-        return []
+        logger.error("File read timed out")
+        raise HTTPException(status_code=504, detail="Data source read timed out")
 ```
 
 ---
@@ -103,26 +111,29 @@ def fetch_with_timeout(label: str, timeout_seconds=30):
 
 ### Input Validation
 
-Validate all user inputs before processing.
+Validate all inputs before processing.
 
 ```python
-# ✅ Good: Input validation
-def validate_label(label: str) -> str:
-    """Validate Google Keep label"""
-    if not label or not label.strip():
-        raise ValueError("Label cannot be empty")
-    if len(label) > 100:
-        raise ValueError("Label too long (max 100 characters)")
-    if not label.isprintable():
-        raise ValueError("Label contains invalid characters")
-    return label.strip()
+# Good: File path validation
+def validate_vault_path(path: Path) -> Path:
+    """Validate Obsidian vault file path"""
+    resolved = path.resolve()
+    if not resolved.exists():
+        raise FileNotFoundError(f"Vault file not found: {resolved.name}")
+    if not resolved.is_file():
+        raise ValueError(f"Path is not a file: {resolved.name}")
+    if resolved.suffix != ".md":
+        raise ValueError(f"Expected .md file, got: {resolved.suffix}")
+    return resolved
 
 # Usage
 try:
-    validated_label = validate_label(user_input)
-    assets = fetch_investment_data(validated_label)
+    vault_path = validate_vault_path(user_configured_path)
+    records = fetch_investment_data(vault_path)
+except FileNotFoundError as e:
+    raise HTTPException(status_code=404, detail=str(e))
 except ValueError as e:
-    st.error(f"Invalid input: {e}")
+    raise HTTPException(status_code=422, detail=str(e))
 ```
 
 ### Data Integrity Checks
@@ -130,21 +141,28 @@ except ValueError as e:
 Validate parsed investment data.
 
 ```python
-# ✅ Good: Data integrity checks
-def validate_asset(asset: InvestmentAsset) -> InvestmentAsset:
-    """Validate investment asset data"""
-    if not asset.name or not asset.name.strip():
-        raise ValueError("Asset name cannot be empty")
-    if asset.quantity <= 0:
-        raise ValueError(f"Quantity must be positive: {asset.quantity}")
-    if asset.unit_price.amount < 0:
-        raise ValueError(f"Price cannot be negative: {asset.unit_price}")
-    return asset
+# Good: Data integrity checks
+def validate_record(record: InvestmentRecord) -> InvestmentRecord:
+    """Validate investment record data"""
+    if not record.date or not record.date.strip():
+        raise ValueError("Record date cannot be empty")
+    if record.amount < 0:
+        raise ValueError(f"Amount cannot be negative: {record.amount}")
+    return record
 
 # Usage in parser
-def parse_note(note_text: str) -> InvestmentAsset:
-    asset = InvestmentAsset(...)
-    return validate_asset(asset)
+def parse_line(line: str) -> InvestmentRecord:
+    """Parse a single line (format: M.DD 억)"""
+    parts = line.strip().split()
+    if len(parts) != 2:
+        raise ValueError(f"Invalid format, expected 'M.DD 억': {line}")
+    date_str = parts[0]
+    amount_str = parts[1]
+    if not amount_str.endswith("억"):
+        raise ValueError(f"Amount must end with '억': {amount_str}")
+    amount = Decimal(amount_str.rstrip("억"))
+    record = InvestmentRecord(date=date_str, amount=amount)
+    return validate_record(record)
 ```
 
 ---
@@ -153,10 +171,10 @@ def parse_note(note_text: str) -> InvestmentAsset:
 
 ### 1. Application-Level Caching
 
-Cache frequently accessed data to reduce API calls.
+Cache parsed data to reduce file reads.
 
 ```python
-# ✅ Good: Application caching
+# Good: Application caching
 from functools import lru_cache
 import time
 
@@ -180,27 +198,43 @@ class DataCache:
 # Usage
 cache = DataCache(ttl_seconds=300)  # 5 minute cache
 
-def get_investment_data(label: str):
-    cached = cache.get(label)
+def get_investment_data(vault_path: Path):
+    cache_key = str(vault_path)
+    cached = cache.get(cache_key)
     if cached:
         return cached
 
-    data = fetch_from_api(label)
-    cache.set(label, data)
+    data = read_and_parse_vault(vault_path)
+    cache.set(cache_key, data)
     return data
 ```
 
-### 2. Streamlit Caching
+### 2. FastAPI Response Caching
 
-Use Streamlit's built-in caching for expensive operations.
+Use FastAPI middleware or decorators for response caching.
 
 ```python
-# ✅ Good: Streamlit caching
-@st.cache_data(ttl=300)  # Cache for 5 minutes
-def fetch_expensive_data(label: str) -> List[InvestmentAsset]:
-    """Fetch data with caching"""
-    time.sleep(2)  # Simulate expensive operation
-    return fetch_from_api(label)
+# Good: API response caching
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+import time
+
+_cache = {}
+_CACHE_TTL = 300  # 5 minutes
+
+@app.get("/api/v1/history")
+async def get_history():
+    cache_key = "portfolio_history"
+    if cache_key in _cache:
+        data, timestamp = _cache[cache_key]
+        if time.time() - timestamp < _CACHE_TTL:
+            return JSONResponse(content=data)
+
+    vault_path = get_vault_path()
+    records = parser.fetch_investment_records(vault_path)
+    history = PortfolioHistory(records=records).model_dump()
+    _cache[cache_key] = (history, time.time())
+    return JSONResponse(content=history)
 ```
 
 ---
@@ -212,7 +246,7 @@ def fetch_expensive_data(label: str) -> List[InvestmentAsset]:
 Use structured logging for better debugging and monitoring.
 
 ```python
-# ✅ Good: Structured logging
+# Good: Structured logging
 import logging
 import json
 
@@ -239,7 +273,7 @@ logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
 # Usage
-logger.info("Fetching investment data", extra={"label": "투자", "attempt": 1})
+logger.info("Reading Obsidian vault", extra={"file": "투자.md", "attempt": 1})
 ```
 
 ### Error Tracking
@@ -247,7 +281,7 @@ logger.info("Fetching investment data", extra={"label": "투자", "attempt": 1})
 Track errors for monitoring and debugging.
 
 ```python
-# ✅ Good: Error tracking
+# Good: Error tracking
 class ErrorTracker:
     def __init__(self):
         self._errors = []
@@ -272,8 +306,8 @@ tracker = ErrorTracker()
 try:
     fetch_investment_data()
 except Exception as e:
-    tracker.track_error(e, context={"label": "투자"})
-    st.error("Failed to fetch data. Error has been logged.")
+    tracker.track_error(e, context={"file": "투자.md"})
+    raise HTTPException(status_code=500, detail="Failed to fetch data")
 ```
 
 ### Performance Monitoring
@@ -281,7 +315,7 @@ except Exception as e:
 Track performance metrics to identify bottlenecks.
 
 ```python
-# ✅ Good: Performance monitoring
+# Good: Performance monitoring
 import time
 from contextlib import contextmanager
 
@@ -303,7 +337,7 @@ def performance_tracker(operation_name: str):
 
 # Usage
 with performance_tracker("fetch_investment_data"):
-    assets = fetch_investment_data("투자")
+    records = fetch_investment_data(vault_path)
 ```
 
 ---
@@ -315,29 +349,29 @@ with performance_tracker("fetch_investment_data"):
 Regularly backup critical data.
 
 ```python
-# ✅ Good: Data backup
+# Good: Data backup
 import json
 import os
 from datetime import datetime
 
-def backup_investment_data(assets: List[InvestmentAsset], backup_dir="backups"):
+def backup_investment_data(records: List[InvestmentRecord], backup_dir="backups"):
     """Backup investment data to file"""
     os.makedirs(backup_dir, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_file = os.path.join(backup_dir, f"investment_data_{timestamp}.json")
 
-    data = [asset.to_dict() for asset in assets]
-    with open(backup_file, "w") as f:
-        json.dump(data, f, indent=2)
+    data = [record.to_dict() for record in records]
+    with open(backup_file, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
 
     logger.info(f"Backup created: {backup_file}")
 
 # Scheduled backup
 def scheduled_backup():
     """Run scheduled backup"""
-    assets = fetch_investment_data("투자")
-    backup_investment_data(assets)
+    records = fetch_investment_data(vault_path)
+    backup_investment_data(records)
 ```
 
 ### Data Recovery
@@ -345,22 +379,15 @@ def scheduled_backup():
 Restore from backup when needed.
 
 ```python
-# ✅ Good: Data recovery
-def restore_from_backup(backup_file: str) -> List[InvestmentAsset]:
+# Good: Data recovery
+def restore_from_backup(backup_file: str) -> List[InvestmentRecord]:
     """Restore investment data from backup"""
-    with open(backup_file, "r") as f:
+    with open(backup_file, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    assets = [InvestmentAsset.from_dict(asset_data) for asset_data in data]
-    logger.info(f"Restored {len(assets)} assets from {backup_file}")
-    return assets
-
-# Usage
-if st.button("Restore from Backup"):
-    backup_file = st.file_uploader("Select backup file")
-    if backup_file:
-        assets = restore_from_backup(backup_file)
-        st.success(f"Restored {len(assets)} assets")
+    records = [InvestmentRecord.from_dict(r) for r in data]
+    logger.info(f"Restored {len(records)} records from {backup_file}")
+    return records
 ```
 
 ---
@@ -372,11 +399,12 @@ if st.button("Restore from Backup"):
 Implement health check endpoints for monitoring.
 
 ```python
-# ✅ Good: Health check
-def health_check() -> dict:
+# Good: Health check
+@app.get("/health")
+async def health_check():
     """Check application health"""
     checks = {
-        "google_keep_connection": check_google_keep_connection(),
+        "obsidian_vault": check_vault_accessibility(),
         "data_cache": check_data_cache(),
         "disk_space": check_disk_space(),
     }
@@ -390,22 +418,13 @@ def health_check() -> dict:
         "timestamp": datetime.datetime.now().isoformat(),
     }
 
-def check_google_keep_connection() -> bool:
-    """Check Google Keep connection"""
+def check_vault_accessibility() -> bool:
+    """Check Obsidian vault file accessibility"""
     try:
-        keep.resume()
-        return True
-    except:
+        vault_path = get_vault_path()
+        return vault_path.exists() and vault_path.is_file()
+    except Exception:
         return False
-
-# Display health status
-if st.button("Health Check"):
-    health = health_check()
-    st.json(health)
-    if health["status"] == "healthy":
-        st.success("All systems operational")
-    else:
-        st.warning("Some systems degraded")
 ```
 
 ---
@@ -417,21 +436,17 @@ if st.button("Health Check"):
 Test individual components in isolation.
 
 ```python
-# ✅ Good: Unit tests
+# Good: Unit tests
 def test_portfolio_total_value_empty():
-    """Test total value with no assets"""
-    portfolio = Portfolio(assets=[])
+    """Test total value with no records"""
+    portfolio = Portfolio(records=[])
     assert portfolio.total_value().amount == Decimal("0")
 
-def test_portfolio_total_value_single_asset():
-    """Test total value with single asset"""
-    asset = InvestmentAsset(
-        name="Stock A",
-        quantity=10,
-        unit_price=Money(amount=Decimal("100000"), currency="KRW")
-    )
-    portfolio = Portfolio(assets=[asset])
-    assert portfolio.total_value().amount == Decimal("1000000")
+def test_portfolio_total_value_single_record():
+    """Test total value with single record"""
+    record = InvestmentRecord(date="4.19", amount=Decimal("1.5"))
+    portfolio = Portfolio(records=[record])
+    assert portfolio.total_value().amount == Decimal("1.5")
 ```
 
 ### Integration Testing
@@ -439,20 +454,20 @@ def test_portfolio_total_value_single_asset():
 Test components working together.
 
 ```python
-# ✅ Good: Integration tests
-def test_fetch_and_parse_flow():
-    """Test complete fetch and parse flow"""
+# Good: Integration tests
+def test_fetch_and_parse_flow(tmp_path):
+    """Test complete file read and parse flow"""
     # Setup
-    mock_keep = Mock()
-    mock_keep.find.return_value = [create_mock_note()]
+    vault_file = tmp_path / "투자.md"
+    vault_file.write_text("4.19 1.5억\n4.18 1.3억\n", encoding="utf-8")
 
     # Test
-    repository = GKeepRepository(mock_keep)
-    assets = repository.fetch_investment_notes("투자")
+    parser = ObsidianParser(vault_path=vault_file)
+    records = parser.fetch_investment_records()
 
     # Verify
-    assert len(assets) == 1
-    assert assets[0].name == "Stock A"
+    assert len(records) == 2
+    assert records[0].amount == Decimal("1.5")
 ```
 
 ### End-to-End Testing
@@ -460,19 +475,15 @@ def test_fetch_and_parse_flow():
 Test complete user flows.
 
 ```python
-# ✅ Good: End-to-end tests
-def test_dashboard_displays_portfolio():
-    """Test dashboard displays portfolio correctly"""
-    # Setup
-    assets = create_test_assets()
-    mock_streamlit = Mock()
+# Good: End-to-end tests
+from fastapi.testclient import TestClient
 
-    # Test
-    show_dashboard(assets, mock_streamlit)
-
-    # Verify
-    assert mock_streamlit.metric.call_count == 3
-    assert mock_streamlit.plotly_chart.call_count >= 1
+def test_history_endpoint_returns_data(client: TestClient):
+    """Test /api/v1/history returns portfolio data"""
+    response = client.get("/api/v1/history")
+    assert response.status_code == 200
+    data = response.json()
+    assert "records" in data
 ```
 
 ---
@@ -482,7 +493,7 @@ def test_dashboard_displays_portfolio():
 Implement circuit breaker to prevent cascading failures.
 
 ```python
-# ✅ Good: Circuit breaker
+# Good: Circuit breaker for file reads
 class CircuitBreaker:
     def __init__(self, failure_threshold=3, timeout_seconds=60):
         self.failure_threshold = failure_threshold
@@ -517,12 +528,12 @@ class CircuitBreaker:
 # Usage
 circuit_breaker = CircuitBreaker(failure_threshold=3, timeout_seconds=60)
 
-def safe_fetch_data(label: str):
+def safe_fetch_data(vault_path: Path):
     try:
-        return circuit_breaker.call(fetch_investment_data, label)
+        return circuit_breaker.call(read_and_parse_vault, vault_path)
     except Exception as e:
-        st.error(f"Circuit breaker triggered: {e}")
-        return []
+        logger.error(f"Circuit breaker triggered: {e}")
+        return load_cached_data()
 ```
 
 ---
@@ -534,7 +545,7 @@ def safe_fetch_data(label: str):
 Handle shutdown gracefully to complete in-flight operations.
 
 ```python
-# ✅ Good: Graceful shutdown
+# Good: Graceful shutdown
 import signal
 import sys
 
@@ -551,14 +562,13 @@ class GracefulShutdown:
     def is_shutdown_requested(self):
         return self.shutdown
 
-# Usage
+# Usage with FastAPI
+import uvicorn
+
 shutdown_handler = GracefulShutdown()
 
-while not shutdown_handler.is_shutdown_requested():
-    try:
-        process_requests()
-    except Exception as e:
-        logger.error(f"Error processing requests: {e}")
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000)
 
 logger.info("Graceful shutdown complete")
 ```
@@ -568,16 +578,20 @@ logger.info("Graceful shutdown complete")
 Validate configuration at startup.
 
 ```python
-# ✅ Good: Configuration validation
+# Good: Configuration validation
 def validate_config():
     """Validate application configuration"""
     errors = []
 
-    # Check environment variables
-    if not os.getenv("GOOGLE_KEEP_EMAIL"):
-        errors.append("GOOGLE_KEEP_EMAIL not set")
-    if not os.getenv("GOOGLE_KEEP_PASSWORD"):
-        errors.append("GOOGLE_KEEP_PASSWORD not set")
+    # Check Obsidian vault path
+    vault_path = Path(os.getenv(
+        "OBSIDIAN_VAULT_PATH",
+        str(Path.home() / "git" / "obsidian" / "투자" / "투자.md")
+    ))
+    if not vault_path.exists():
+        errors.append(f"Obsidian vault file not found: {vault_path}")
+    if vault_path.exists() and not os.access(vault_path, os.R_OK):
+        errors.append(f"No read permission for vault file: {vault_path}")
 
     # Check directory structure
     required_dirs = ["backups", "logs"]
@@ -611,7 +625,7 @@ Classify incidents by severity:
 | Severity | Description | Response Time | Example |
 |----------|-------------|---------------|---------|
 | P1 - Critical | Complete outage | < 15 minutes | Application down, no data available |
-| P2 - High | Major functionality broken | < 1 hour | Cannot fetch data, partial outage |
+| P2 - High | Major functionality broken | < 1 hour | Cannot read vault file, API errors |
 | P3 - Medium | Minor functionality broken | < 4 hours | Slow performance, data display issues |
 | P4 - Low | Cosmetic issues | < 24 hours | UI bugs, formatting issues |
 
@@ -629,9 +643,9 @@ Classify incidents by severity:
 ## Best Practices Summary
 
 1. **Handle errors gracefully:** Never crash the application
-2. **Implement retries:** Retry transient failures
-3. **Validate all inputs:** Don't trust user input
-4. **Cache strategically:** Reduce API calls and improve performance
+2. **Implement retries:** Retry transient file I/O failures
+3. **Validate all inputs:** Don't trust user input or file content
+4. **Cache strategically:** Reduce file reads and improve performance
 5. **Monitor everything:** Log errors and track performance
 6. **Test thoroughly:** Unit, integration, and E2E tests
 7. **Backup regularly:** Have recovery plan for data loss
@@ -653,4 +667,5 @@ Classify incidents by severity:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1.0 | 2026-04-19 | Updated for Obsidian file I/O error patterns |
 | 1.0.0 | 2026-03-29 | Initial reliability documentation |

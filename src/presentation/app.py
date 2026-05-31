@@ -1,237 +1,220 @@
-"""
-Main FastAPI Application
-
-Financing investment dashboard main application with REST API endpoints.
-"""
-
-from fastapi import FastAPI, HTTPException, status
 import datetime
-from fastapi.middleware.cors import CORSMiddleware
+import logging
+import os
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from prometheus_client import make_asgi_app, CollectorRegistry
+from decimal import Decimal
+from typing import Optional
 
+from fastapi import FastAPI, Header, HTTPException, Query, status
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, field_validator
+from typing_extensions import TypedDict
+
+from src.application.use_cases.analyze_history import AnalyzeHistory, ParserPort
 from src.config.logging import configure_logging
-from src.config.agent_config import load_config
-from src.application.services.agent_orchestrator import AgentOrchestrator
+from src.infrastructure.parsers.obsidian_parser import ObsidianParser
 
-from src.infrastructure.repositories.gkeep_repository import GKeepRepository
-from src.application.use_cases.fetch_investment_data import FetchInvestmentData
-from src.domain.entities.portfolio import Portfolio
-from src.presentation.validators import (
-    validate_email,
-    validate_label,
-    sanitize_label,
-    validate_password,
-)
+logger = logging.getLogger(__name__)
+
+# --- Dependency Injection ---
+
+def get_parser() -> ParserPort:
+    """Factory function to create parser instance.
+
+    In production, returns real ObsidianParser.
+    In tests, can be mocked via patching.
+    """
+    return ObsidianParser()
 
 
-# Lifespan for managing repository connection
+def get_analyze_use_case() -> AnalyzeHistory:
+    """Factory function to create AnalyzeHistory with injected parser."""
+    parser = get_parser()
+    return AnalyzeHistory(parser=parser)
+
+
+# Create instances
+parser = get_parser()
+analyze_use_case = get_analyze_use_case()
+
+# Simple API key for local development (override with FINANCING_API_KEY env var)
+API_KEY = os.environ.get("FINANCING_API_KEY", "local-dev-only")
+
+
+async def verify_api_key(x_api_key: str = Header(...)):
+    """Verify API key for write operations."""
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid API key")
+
+
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Manage application lifespan"""
-    # Configure logging
+async def lifespan(app: FastAPI) -> AsyncIterator[FastAPI]:
     configure_logging()
-    
-    # Load agent config and initialize orchestrator if enabled
-    config = load_config()
-    if config.enabled:
-        orch = AgentOrchestrator(
-            chain=config.chain,
-            timeout_ms=config.timeout_ms,
-            cooldown_ms=config.cooldown_ms,
-            failure_threshold=config.failure_threshold,
-        )
-        app.state.orchestrator = orch
-        app.state.agent_config = config
-        app.state.repository = None
-        
-        # Register agent adapters (simulated agent repositories)
-        app.state.agent_adapters = {
-            'sisyphus': lambda label: [],
-            'prometheus': lambda label: [],
-            'atlas': lambda label: [],
-        }
-    else:
-        app.state.orchestrator = None
-        app.state.agent_config = config
-        app.state.repository = None
-    
     yield
-    
-    # Shutdown
-    app.state.repository = None
-    app.state.orchestrator = None
 
 
-# Create FastAPI application
 app = FastAPI(
     title="Financing API",
-    description="Investment dashboard API for portfolio management",
-    version="1.0.0",
+    description="Investment dashboard API — Obsidian-based portfolio tracking",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
-# Mount metrics app at /metrics
-metrics_app = make_asgi_app()
-app.mount("/metrics", metrics_app)
-
-# Add CORS middleware - allow requests from any origin for external access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for external access
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=["http://localhost:5180", "http://127.0.0.1:5180"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT"],
     allow_headers=["*"],
 )
 
 
+# --- Schemas ---
+
+
+class RawRecord(BaseModel):
+    month: int
+    day: int
+    amount: str
+
+    @field_validator("month")
+    @classmethod
+    def validate_month(cls, v: int) -> int:
+        if not 1 <= v <= 12:
+            raise ValueError("month must be 1-12")
+        return v
+
+    @field_validator("day")
+    @classmethod
+    def validate_day(cls, v: int, info) -> int:
+        if not 1 <= v <= 31:
+            raise ValueError("day must be 1-31")
+
+        # Validate month-specific max day
+        month = info.data.get("month")
+        if month is not None:
+            import calendar
+
+            max_day = calendar.monthrange(2024, month)[1]  # Use leap year for safety
+            if v > max_day:
+                raise ValueError(f"day must be 1-{max_day} for month {month}")
+        return v
+
+    @field_validator("amount")
+    @classmethod
+    def validate_amount(cls, v: str) -> str:
+        from decimal import InvalidOperation
+
+        try:
+            result = Decimal(v)
+            if result < 0:
+                raise ValueError("amount must be non-negative")
+        except (ValueError, TypeError, InvalidOperation) as e:
+            raise ValueError(f"amount must be a valid non-negative number: {v}") from e
+        return str(result)  # Return normalized format
+
+
+class RawDataRequest(BaseModel):
+    year: int
+    frontmatter: str
+    records: list[RawRecord]
+
+
+class RootResponse(TypedDict):
+    message: str
+    version: str
+    docs: str
+
+
+class HealthResponse(TypedDict):
+    status: str
+    timestamp: str
+
+
 @app.get("/")
-async def root():
-    """Root endpoint"""
-    return {
-        "message": "Financing API",
-        "version": "1.0.0",
-        "docs": "/docs",
-    }
+async def root() -> RootResponse:
+    return {"message": "Financing API", "version": "2.0.0", "docs": "/docs"}
 
 
 @app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "timestamp": datetime.datetime.now().isoformat(),
-    }
+async def health_check() -> HealthResponse:
+    return {"status": "healthy", "timestamp": datetime.datetime.now().isoformat()}
 
 
-@app.get("/api/v1/portfolio")
-async def get_portfolio(label: str = "투자"):
-    """
-    Get portfolio data from Google Keep
-
-    Args:
-        label: Google Keep label to filter notes
-
-    Returns:
-        Portfolio data including total value and allocation
-    """
-    # Validate and sanitize label
-    if not validate_label(label):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Invalid label format"
-        )
-    
-    sanitized_label = sanitize_label(label)
-    
+@app.post("/api/v1/sync")
+async def sync_vault():
     try:
-        # Get repository from app state
-        repository: GKeepRepository = app.state.repository
-        
-        if not repository:
-            return {"error": "Repository not initialized. Call POST /api/v1/auth first"}
-        
-        # Fetch investment data
-        fetch_use_case = FetchInvestmentData(repository=repository, orchestrator=app.state.orchestrator)
-        
-        # Build agent callables mapping if orchestrator present and adapters registered
-        if getattr(app.state, "orchestrator", None) and getattr(app.state, "agent_adapters", None):
-            adapters = app.state.agent_adapters
-            
-            # Pass mapping through orchestrator by calling execute_with_fallback with mapping
-            assets = app.state.orchestrator.execute_with_fallback(adapters)
-        else:
-            assets = fetch_use_case.execute(label=sanitized_label)
-        
-        # Create portfolio
-        portfolio = Portfolio(assets=assets)
-        
-        # Calculate metrics
-        total_value = portfolio.total_value()
-        allocation = portfolio.allocation_by_type()
-        
-        return {
-            "total_value": {
-                "amount": float(total_value.amount),
-                "currency": total_value.currency,
-            },
-            "allocation": {
-                asset_type.display_name(): ratio
-                for asset_type, ratio in allocation.items()
-            },
-            "assets": [
-                {
-                    "name": asset.name,
-                    "type": asset.asset_type.display_name(),
-                    "quantity": asset.quantity,
-                    "unit_price": {
-                        "amount": float(asset.unit_price.amount),
-                        "currency": asset.unit_price.currency,
-                    },
-                    "total_value": {
-                        "amount": float(asset.total_value().amount),
-                        "currency": asset.total_value().currency,
-                    },
-                }
-                for asset in portfolio.assets
-            ],
-            "asset_count": len(portfolio.assets),
-        }
-    
+        result = parser.pull()
+        return {"status": "synced", "detail": result}
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch portfolio: {str(e)}"
-        )
+            detail=f"Git pull failed: {str(e)}",
+        ) from e
 
 
-@app.post("/api/v1/auth")
-async def authenticate(email: str, password: str):
-    """
-    Authenticate with Google Keep
-
-    Args:
-        email: Google account email
-        password: Google account password or app password
-
-    Returns:
-        Authentication status
-    """
-    # Validate inputs
-    if not validate_email(email):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Invalid email format"
-        )
-    
-    if not validate_password(password):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Password is required"
-        )
-    
+@app.get("/api/v1/history")
+async def get_history(year: Optional[int] = None):
     try:
-        # Create repository with credentials
-        repository = GKeepRepository(email=email, password=password)
-        
-        # Store repository in app state
-        app.state.repository = repository
-        
-        return {"status": "authenticated", "email": email}
-    
+        parser.pull()
+        history = parser.parse(year=year)
+        return analyze_use_case.execute(history)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Authentication failed: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to parse investment data: {str(e)}",
+        ) from e
+
+
+@app.get("/api/v1/raw-data")
+async def get_raw_data(year: Optional[int] = None):
+    try:
+        return parser.read_raw(year=year)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to read raw data: {str(e)}",
+        ) from e
+
+
+@app.put("/api/v1/raw-data")
+async def put_raw_data(
+    request: RawDataRequest,
+    commit: bool = Query(default=True, description="Git commit 여부"),
+    x_api_key: str = Header(...),
+):
+    # Verify API key
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid API key")
+    try:
+        parser.write_raw(
+            year=request.year,
+            frontmatter=request.frontmatter,
+            records=[r.model_dump() for r in request.records],
         )
+        commit_hash = None
+        if commit:
+            commit_hash = parser.commit(
+                f"Update investment data via Financing app ({len(request.records)} records)"
+            )
+        return {"status": "saved", "record_count": len(request.records), "commit": commit_hash}
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)) from e
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to save raw data: {str(e)}",
+        ) from e
 
 
 if __name__ == "__main__":
     import uvicorn
-    
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=8000,
-        reload=False,
-    )
+
+    uvicorn.run(app, host="127.0.0.1", port=8000, reload=False)

@@ -3,18 +3,14 @@ Unit tests for ports_validate.py
 """
 import json
 import sys
-import pytest
 from pathlib import Path
+
+import pytest
 
 # Add parent directory to path to import scripts module
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from scripts.ports_validate import (
-    validate_schema,
-    check_duplicates,
-    load_schema,
-    load_ports
-)
+from scripts.ports_validate import check_duplicates, load_ports, load_schema, validate_schema
 
 
 class TestValidateSchema:

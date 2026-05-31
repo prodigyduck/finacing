@@ -2,376 +2,123 @@
 
 ## Overview
 
-The Financing project follows **Clean Architecture** principles with a clear separation of concerns across four distinct layers. This architecture ensures maintainability, testability, and independence from external dependencies.
+Financing은 **Clean Architecture** 원칙을 따르는 Obsidian 기반 투자 대시보드입니다.
 
 ## Architecture Layers
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                   Presentation Layer                         │
-│  Vue.js UI (dashboard, settings, FastAPI REST)         │
-└─────────────────────────────────────────────────────────────┘
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   Application Layer                          │
-│  Use Cases + Ports (FetchInvestmentData, AnalyzePortfolio) │
-└─────────────────────────────────────────────────────────────┘
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   Domain Layer                              │
-│  Entities + Value Objects (Portfolio, InvestmentAsset, Money)│
-└─────────────────────────────────────────────────────────────┘
-                            ▲
-┌─────────────────────────────────────────────────────────────┐
-│                Infrastructure Layer                         │
-│  External Integrations (Google Keep API, NoteParser)        │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│              Presentation Layer                   │
+│   Vue.js UI (Dashboard) + FastAPI REST API       │
+└─────────────────────────────────────────────────┘
+                        ▼
+┌─────────────────────────────────────────────────┐
+│              Application Layer                    │
+│   Use Cases (AnalyzeHistory — 추세 분석 + 예측) │
+└─────────────────────────────────────────────────┘
+                        ▼
+┌─────────────────────────────────────────────────┐
+│              Domain Layer                         │
+│   Entities (InvestmentRecord, PortfolioHistory)   │
+└─────────────────────────────────────────────────┘
+                        ▲
+┌─────────────────────────────────────────────────┐
+│           Infrastructure Layer                    │
+│   ObsidianParser (로컬 마크다운 파일 파싱)       │
+└─────────────────────────────────────────────────┘
 ```
 
 ## Layer Responsibilities
 
 ### 1. Domain Layer (`src/domain/`)
 
-**Purpose:** Contains the core business logic and domain models.
+핵심 비즈니스 로직. 외부 의존성 없음.
 
-**Components:**
-- **Value Objects:** Immutable objects that represent concepts in the domain
-  - `Money`: Represents monetary values with currency and precision
-  - `AssetType`: Enum defining asset categories (Stock, ETF, Bond, Cash, Other)
-
-- **Entities:** Objects with unique identity and business logic
-  - `InvestmentAsset`: Represents a single investment holding
-  - `Portfolio`: Collection of assets with aggregate calculations
-
-**Key Principles:**
-- No external dependencies (framework-agnostic)
-- Pure business logic only
-- No data access or I/O operations
-- Testable in isolation
-
-**Example:**
-```python
-from src.domain.entities.portfolio import Portfolio
-from src.domain.value_objects.money import Money
-
-portfolio = Portfolio(assets=[...])
-total = portfolio.total_value()  # Business logic, no I/O
-```
-
----
+- **InvestmentRecord**: 날짜 + 금액(억) 불변 값
+- **PortfolioHistory**: 시계열 레코드 컬렉션 (최신값, 변화량, 수익률 계산)
 
 ### 2. Application Layer (`src/application/`)
 
-**Purpose:** Orchestrates domain objects to execute use cases.
+도메인 객체를 조율하는 유스케이스.
 
-**Components:**
-- **Use Cases:** Application-specific business operations
-  - `FetchInvestmentData`: Retrieve investment data from Google Keep
-  - `AnalyzePortfolio`: Calculate portfolio metrics and analysis
-  - `CalculateReturns`: Compute investment returns
-
-- **Ports:** Interfaces defining contracts with external systems
-  - `IKeepRepository`: Abstract interface for Google Keep operations
-
-**Key Principles:**
-- Depends only on Domain layer
-- Defines contracts (ports) for Infrastructure to implement
-- Contains orchestration logic, not business logic
-- No framework or UI dependencies
-
-**Example:**
-```python
-from src.application.use_cases.fetch_investment_data import FetchInvestmentData
-
-# Port interface is injected
-use_case = FetchInvestmentData(repository=gkeep_repository)
-assets = use_case.execute(label="투자")
-```
-
----
+- **AnalyzeHistory**: 시계열 분석 + 선형 회귀 기반 3/6/12개월 예측
 
 ### 3. Infrastructure Layer (`src/infrastructure/`)
 
-**Purpose:** Implements ports defined by the Application layer.
+외부 시스템과의 연동.
 
-**Components:**
-- **Repositories:** Concrete implementations of ports
-  - `GKeepRepository`: Google Keep API integration using gkeepapi library
-
-- **Parsers:** External data format conversion
-  - `NoteParser`: Parses Google Keep note text into domain objects
-
-**Key Principles:**
-- Implements Application layer ports
-- Handles all external integrations (APIs, databases, file systems)
-- Adapts external data to domain objects
-- Depends on Domain and Application layers
-
-**Example:**
-```python
-from src.infrastructure.repositories.gkeep_repository import GKeepRepository
-
-# Implements IKeepRepository port
-repository = GKeepRepository(email, password, master_token)
-```
-
----
+- **ObsidianParser**: `투자.md` 파일을 파싱하여 `PortfolioHistory` 생성
 
 ### 4. Presentation Layer (`src/presentation/`)
 
-**Purpose:** Handles user interface and user interactions.
+사용자 인터페이스.
 
-**Components:**
-- **FastAPI Backend:** REST API server
-  - `app.py`: Main FastAPI application with REST endpoints
+- **FastAPI**: `GET /api/v1/history` 엔드포인트
+- **Vue.js**: 시계열 라인 차트 + 추세선 대시보드 (ECharts)
 
-- **Vue.js Frontend:** Single Page Application
-  - `Dashboard.vue`: Asset visualization and portfolio overview
-  - `Settings.vue`: Google Keep authentication configuration
-  - `PieChart.vue`, `BarChart.vue`: Reusable chart components
+### 5. Config Layer (`src/config/`)
 
-**Key Principles:**
-- Thin UI layer with minimal logic
-- Delegates all business operations to Application layer
-- Handles user input and displays output
-- Depends on Application layer only
+애플리케이션 설정.
 
-**Example:**
-```python
-from src.presentation.app import main
-
-# Streamlit UI - delegates to use cases
-if __name__ == "__main__":
-    main()
-```
-
----
+- **logging**: 콘솔 + 파일 로깅 설정
 
 ## Dependency Flow
 
 ```
 Presentation → Application → Domain
-                  ↑
-Infrastructure ──┘
+                   ↑
+Infrastructure ────┘
 ```
-
-**Critical Rule:** Dependencies point **inward**. The Domain layer is at the center and has no dependencies. Outer layers depend on inner layers.
 
 ## Data Flow
 
-### 1. Fetching Investment Data
-
 ```
-User Request (Streamlit)
+GET /api/v1/history
     ↓
-FetchInvestmentData Use Case (Application)
+ObsidianParser.parse() → ~/git/obsidian/투자/투자.md 읽기
     ↓
-IKeepRepository.fetch_investment_notes() (Port)
+PortfolioHistory (Domain)
     ↓
-GKeepRepository (Infrastructure) → Google Keep API
+AnalyzeHistory.execute() → 분석 + 선형 회귀 예측
     ↓
-NoteParser (Infrastructure) → Parses text to domain objects
+JSON Response (records, projections)
     ↓
-Returns List[InvestmentAsset] (Domain)
-    ↓
-Use Case returns to Presentation
-    ↓
-Display in Streamlit UI
+Vue.js PortfolioChart (실제 데이터 + 추세선)
 ```
-
-### 2. Calculating Portfolio Metrics
-
-```
-User Request (Streamlit)
-    ↓
-AnalyzePortfolio Use Case (Application)
-    ↓
-Portfolio.total_value() (Domain - business logic)
-Portfolio.allocation_by_type() (Domain - business logic)
-    ↓
-Returns calculated metrics (Domain value objects)
-    ↓
-Use Case returns to Presentation
-    ↓
-Visualize with Plotly in Streamlit
-```
-
----
-
-## Key Patterns
-
-### Dependency Injection
-
-Ports are injected into use cases, enabling testability and flexibility:
-
-```python
-# Production: Inject real repository
-repository = GKeepRepository(email, password, master_token)
-use_case = FetchInvestmentData(repository)
-
-# Testing: Inject mock repository
-mock_repo = Mock(spec=IKeepRepository)
-use_case = FetchInvestmentData(mock_repo)
-```
-
-### Hexagonal Architecture
-
-The project follows hexagonal architecture principles:
-- **Domain:** Core business logic (inner hexagon)
-- **Application:** Use cases orchestrate domain (middle hexagon)
-- **Ports:** Interfaces for external integration (hexagon boundaries)
-- **Adapters:** Infrastructure implements ports (outer hexagon)
-
-### Value Object Immutability
-
-Value objects are immutable to prevent bugs:
-
-```python
-from src.domain.value_objects.money import Money
-
-# Cannot modify after creation
-money = Money(amount=Decimal("1000"), currency="KRW")
-# money.amount = 2000  # ❌ Error: dataclass with frozen=True
-```
-
----
 
 ## Module Structure
 
 ```
 src/
 ├── domain/
-│   ├── entities/
-│   │   ├── investment_asset.py
-│   │   └── portfolio.py
-│   └── value_objects/
-│       ├── asset_type.py
-│       └── money.py
+│   └── entities/
+│       ├── investment_record.py
+│       └── portfolio_history.py
 ├── application/
-│   ├── ports/
-│   │   └── keep_repository.py
 │   └── use_cases/
-│       ├── analyze_portfolio.py
-│       ├── calculate_returns.py
-│       └── fetch_investment_data.py
+│       └── analyze_history.py
 ├── infrastructure/
-│   ├── parsers/
-│   │   └── note_parser.py
-│   └── repositories/
-│       └── gkeep_repository.py
+│   └── parsers/
+│       └── obsidian_parser.py
+├── config/
+│   └── logging.py
 └── presentation/
-    ├── pages/
-    │   ├── dashboard.py
-    │   └── settings.py
     └── app.py
 ```
 
----
-
-## Benefits of This Architecture
-
-### 1. Testability
-- Each layer can be tested in isolation
-- Domain layer has no dependencies → 100% unit testable
-- Ports can be mocked for application layer tests
-
-### 2. Maintainability
-- Clear separation of concerns
-- Changes in one layer don't cascade to others
-- Easy to locate and modify specific functionality
-
-### 3. Flexibility
-- External integrations can be swapped without affecting business logic
-- UI can be changed (e.g., from Streamlit to React) without changing domain
-- Multiple data sources can be added by implementing the same port
-
-### 4. Scalability
-- Business logic is centralized in Domain layer
-- Infrastructure can be optimized independently
-- Presentation layer can scale horizontally
-
----
-
 ## Testing Strategy
 
-### Domain Layer Tests (100% Coverage)
-- Test business logic in isolation
-- No external dependencies
-- Pure Python, no mocking needed
-
-**Example:**
-```python
-# tests/unit/domain/test_portfolio.py
-def test_portfolio_total_value():
-    portfolio = Portfolio(assets=[...])
-    total = portfolio.total_value()
-    assert total.amount == expected_value
-```
-
-### Application Layer Tests (100% Coverage)
-- Test use case orchestration
-- Mock ports and repositories
-- Verify correct interactions
-
-**Example:**
-```python
-# tests/unit/application/test_fetch_investment_data.py
-def test_fetch_investment_data(mock_repository):
-    mock_repository.fetch_investment_notes.return_value = [...]
-    use_case = FetchInvestmentData(mock_repository)
-    assets = use_case.execute(label="투자")
-    assert len(assets) > 0
-```
-
-### Infrastructure Layer Tests (84% Coverage)
-- Test external integrations
-- Use fixtures and real Google Keep sandbox (if available)
-- Test parsing logic thoroughly
-
-### Presentation Layer Tests (48% Coverage)
-- Test Streamlit components with custom fixtures
-- Verify page rendering and user interactions
-- Note: Higher complexity due to Streamlit's nature
-
----
-
-## Future Architecture Considerations
-
-### Potential Enhancements
-
-1. **Event-Driven Architecture**
-   - Add domain events for portfolio changes
-   - Implement event bus for cross-layer communication
-   - Enable real-time updates
-
-2. **CQRS (Command Query Responsibility Segregation)**
-   - Separate read and write models
-   - Optimize for different access patterns
-   - Improve performance for complex queries
-
-3. **Microservices Split**
-   - Extract portfolio calculation service
-   - Separate Google Keep sync service
-   - Deploy independently for better scaling
-
-### Architectural Constraints
-
-- **Google Keep API Limitations:** Non-official API (gkeepapi) may break
-- **Single-User Design:** Currently designed for personal use, not multi-tenant
-- **Stateless UI:** Streamlit's stateless nature requires careful session management
-
----
-
-## References
-
-- [Clean Architecture by Robert C. Martin](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
-- [Hexagonal Architecture by Alistair Cockburn](https://alistair.cockburn.us/hexagonal-architecture/)
-- [Domain-Driven Design by Eric Evans](https://domainlanguage.com/ddd/)
-
----
+| 계층 | 커버리지 | 방식 |
+|------|---------|------|
+| Domain | 100% | 순수 단위 테스트 |
+| Application | 100% | 단위 테스트 |
+| Infrastructure | 90% | 파일 파싱 테스트 |
+| E2E | Playwright | 브라우저 자동화 |
 
 ## Version History
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0.0 | 2026-03-29 | Initial architecture documentation |
+| 버전 | 날짜 | 변경사항 |
+|------|------|---------|
+| 1.0.0 | 2026-03-29 | 초기 아키텍처 (Google Keep 기반) |
+| 2.0.0 | 2026-04-19 | Obsidian 마이그레이션, 시계열 도메인 재설계 |
+| 2.1.0 | 2026-04-25 | 데드 코드 정리, 미사용 모듈 제거 |

@@ -8,22 +8,22 @@ This document outlines the development roadmap, future plans, and strategic init
 
 ## Current Status
 
-### Completed Features ✅
+### Completed Features
 
 - [x] Clean Architecture implementation (Domain, Application, Infrastructure, Presentation)
-- [x] Google Keep API integration
-- [x] Investment data parsing
+- [x] Obsidian vault file reading integration
+- [x] Investment data parsing (M.DD format)
 - [x] Portfolio entity with business logic
 - [x] Use cases (FetchInvestmentData, AnalyzePortfolio, CalculateReturns)
-- [x] Streamlit UI (Dashboard, Settings pages)
-- [x] Unit tests (76 tests, 78% coverage)
+- [x] FastAPI backend with GET /api/v1/history endpoint
+- [x] Vue.js frontend (Dashboard, Settings pages)
+- [x] Unit tests (domain entities: InvestmentRecord, PortfolioHistory)
 - [x] Code quality tooling (black, ruff, mypy)
 - [x] Documentation (AGENTS, ARCHITECTURE, DESIGN, SECURITY, FRONTEND, RELIABILITY, QUALITY_SCORE)
 
-### Known Issues ⚠️
+### Known Issues
 
 - Presentation layer test coverage low (48%)
-- Google Keep API is unofficial (potential reliability risk)
 - No multi-user support (single-user design)
 - Limited error recovery mechanisms
 - No real-time data updates
@@ -38,20 +38,20 @@ This document outlines the development roadmap, future plans, and strategic init
 
 **Tasks:**
 1. **Increase Test Coverage**
-   - [ ] Add missing tests for Infrastructure layer (84% → 90%)
-   - [ ] Add UI component tests for Presentation layer (48% → 70%)
+   - [ ] Add missing tests for Infrastructure layer (84% -> 90%)
+   - [ ] Add UI component tests for Presentation layer (48% -> 70%)
    - [ ] Add integration tests for critical paths
    - [ ] Target: 90%+ overall coverage
 
 2. **Enhance Error Handling**
-   - [ ] Implement retry logic for Google Keep API calls
-   - [ ] Add circuit breaker pattern for API failures
+   - [ ] Implement retry logic for file I/O operations
+   - [ ] Add circuit breaker pattern for file read failures
    - [ ] Improve error messages for better user experience
    - [ ] Add comprehensive error logging
 
 3. **Improve Security**
-   - [ ] Add input validation for all user inputs
-   - [ ] Implement rate limiting for API calls
+   - [ ] Add input validation for all file content
+   - [ ] Implement rate limiting for API endpoints
    - [ ] Add security scanning to CI/CD pipeline
    - [ ] Regular dependency vulnerability scanning
 
@@ -76,7 +76,7 @@ This document outlines the development roadmap, future plans, and strategic init
 
 2. **Enhanced Visualizations**
    - [ ] Add more chart types (line charts, bar charts)
-   - [ ] Interactive filtering by asset type
+   - [ ] Interactive filtering by date range
    - [ ] Color-coded performance indicators
    - [ ] Customizable dashboard layout
 
@@ -112,7 +112,7 @@ This document outlines the development roadmap, future plans, and strategic init
 
 3. **Testing Infrastructure**
    - [ ] Add test data fixtures and factories
-   - [ ] Add test utilities for Streamlit components
+   - [ ] Add test utilities for FastAPI endpoints
    - [ ] Add performance benchmarking
    - [ ] Add integration test environment setup
 
@@ -255,11 +255,11 @@ This document outlines the development roadmap, future plans, and strategic init
 **Goal:** Integrate with multiple data sources for comprehensive analysis
 
 **Tasks:**
-1. **Broker Integration**
-   - [ ] Integrate with Korean brokerage APIs (Kiwoom, NH)
-   - [ ] Add real-time market data
-   - [ ] Implement automatic portfolio synchronization
-   - [ ] Add transaction history import
+1. **Additional File Formats**
+   - [ ] Support CSV import for investment data
+   - [ ] Support Excel file parsing
+   - [ ] Support JSON data sources
+   - [ ] Implement data validation and normalization
 
 2. **Financial Data APIs**
    - [ ] Integrate with financial data providers (Alpha Vantage, Yahoo Finance)
@@ -267,11 +267,11 @@ This document outlines the development roadmap, future plans, and strategic init
    - [ ] Add economic indicators
    - [ ] Implement data validation and normalization
 
-3. **Alternative Data**
-   - [ ] Add news sentiment analysis
-   - [ ] Integrate social media signals
-   - [ ] Add alternative data sources
-   - [ ] Implement data quality scoring
+3. **Broker Integration**
+   - [ ] Integrate with Korean brokerage APIs (Kiwoom, NH)
+   - [ ] Add real-time market data
+   - [ ] Implement automatic portfolio synchronization
+   - [ ] Add transaction history import
 
 **Success Metrics:**
 - 3+ data sources integrated
@@ -292,8 +292,8 @@ This document outlines the development roadmap, future plans, and strategic init
    - [ ] Add push notifications
    - [ ] Offline support
 
-2. **REST API**
-   - [ ] Design and implement REST API
+2. **REST API Expansion**
+   - [ ] Expand REST API beyond /api/v1/history
    - [ ] Add API documentation (OpenAPI/Swagger)
    - [ ] Implement API authentication
    - [ ] Add rate limiting
@@ -316,22 +316,24 @@ This document outlines the development roadmap, future plans, and strategic init
 
 ### Current Tech Stack
 - **Language:** Python 3.11+
-- **Framework:** Streamlit
-- **Testing:** pytest, pytest-cov
+- **Backend:** FastAPI + Uvicorn
+- **Frontend:** Vue.js + Vite + TypeScript
+- **Testing:** pytest, pytest-cov, vitest
 - **Code Quality:** black, ruff, mypy
 - **Architecture:** Clean Architecture
+- **Data Source:** Obsidian vault (local Markdown file)
 
 ### Planned Tech Stack
 
 | Component | Current | Planned | Timeline |
 |-----------|---------|---------|----------|
-| Database | None (Google Keep) | PostgreSQL | 3-6 months |
-| Cache | Streamlit cache | Redis | 3-6 months |
+| Data Source | Obsidian vault (local file) | PostgreSQL + Obsidian | 3-6 months |
+| Cache | In-memory | Redis | 3-6 months |
 | Queue | None | Celery/RabbitMQ | 6-12 months |
 | Monitoring | Basic logging | Prometheus/Grafana | 3-6 months |
 | Deployment | Local | Docker/Kubernetes | 6-12 months |
 | Authentication | None | OAuth2/Keycloak | 3-6 months |
-| API | None | FastAPI/REST | 6-12 months |
+| API | FastAPI (single endpoint) | FastAPI (full REST) | 3-6 months |
 | Mobile | None | React Native | 6-12 months |
 
 ---
@@ -342,10 +344,11 @@ This document outlines the development roadmap, future plans, and strategic init
 
 | Risk | Probability | Impact | Mitigation |
 |------|-------------|--------|------------|
-| Google Keep API breaks | High | High | Implement backup data sources |
+| Obsidian vault file corruption | Low | High | Regular backups, version control |
 | Scalability issues | Medium | High | Implement caching, pagination |
 | Security vulnerabilities | Medium | High | Regular security audits |
 | Performance degradation | Medium | Medium | Monitoring, optimization |
+| File format changes | Low | Medium | Flexible parser, format validation |
 
 ### Business Risks
 
@@ -405,4 +408,5 @@ This document outlines the development roadmap, future plans, and strategic init
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1.0 | 2026-04-19 | Updated for Obsidian-based architecture |
 | 1.0.0 | 2026-03-29 | Initial plans document - Roadmap through 2026 |

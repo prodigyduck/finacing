@@ -3,20 +3,21 @@ Unit tests for ports_generate_env.py
 """
 import json
 import sys
-import pytest
-from pathlib import Path
 import tempfile
+from pathlib import Path
+
+import pytest
 
 # Add parent directory to path to import scripts module
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from scripts.ports_generate_env import (
-    load_ports,
+    find_available_port,
     find_service,
     is_port_available,
-    find_available_port,
+    load_ports,
+    parse_ephemeral_range,
     write_env_file,
-    parse_ephemeral_range
 )
 
 
@@ -166,7 +167,7 @@ class TestWriteEnvFile:
 
         assert output_path.exists()
 
-        with open(output_path, 'r') as f:
+        with open(output_path) as f:
             content = f.read()
 
         expected_content = "# GENERATED FROM ports.json - DO NOT COMMIT\nVITE_PORT=5173\n"

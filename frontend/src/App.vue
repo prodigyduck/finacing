@@ -1,27 +1,20 @@
 <template>
-  <div id="app">
-    <router-view />
-  </div>
+  <v-app>
+    <v-navigation-drawer permanent :width="220" color="surface" border="r">
+      <div class="d-flex align-center ga-3 pa-4 mb-6">
+        <v-avatar size="36" color="primary" rounded="lg">
+          <span class="text-white font-weight-bold text-body-1">W</span>
+        </v-avatar>
+        <span class="text-h6 font-weight-bold">Financing</span>
+      </div>
+      <v-list density="compact" nav>
+        <v-list-item to="/" prepend-icon="mdi-chart-line" title="Dashboard" exact />
+        <v-list-item to="/raw-data" prepend-icon="mdi-table-edit" title="Raw Data" exact />
+      </v-list>
+    </v-navigation-drawer>
+
+    <v-main>
+      <router-view />
+    </v-main>
+  </v-app>
 </template>
-
-<script setup lang="ts">
-</script>
-
-<style>
-#app {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  background-color: #f5f5f5;
-  color: #333;
-}
-</style>

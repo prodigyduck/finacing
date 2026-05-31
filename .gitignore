@@ -29,6 +29,10 @@ ENV/
 # IDE
 .vscode/
 .idea/
+
+# Claude Code (keep settings.local.json)
+.claude/
+!.claude/settings.local.json
 *.swp
 *.swo
 
@@ -36,13 +40,10 @@ ENV/
 .env
 .env.local
 .env.*.local
+config.yaml
 
-# Google Keep token
-*.json
-!pyproject.toml
-!requirements.txt
-!ports.json
-!ports.schema.json
+# Node
+node_modules/
 
 # Testing
 .pytest_cache/
@@ -50,11 +51,19 @@ ENV/
 htmlcov/
 *.cover
 .hypothesis/
-
-# Streamlit
-.streamlit/
+.playwright/
 
 # Type checking
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# Logs & temporary files
+*.log
+.sisyphus/
+
+# Harness workspace (temporary code review artifacts)
+.claude/.workspace/
+
+# Sisyphus CI
+GLM

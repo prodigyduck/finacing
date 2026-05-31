@@ -8,6 +8,7 @@ dependencies = [
     "uvicorn[standard]>=0.27.0",
     "python-dotenv>=1.0.0",
     "requests>=2.31.0",
+    "httpx>=0.25.0,<0.28.0",  # Pin httpx for TestClient compatibility
 
     "pandas>=2.2.0",
     "numpy>=1.26.3",

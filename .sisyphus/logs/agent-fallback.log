@@ -43,3 +43,144 @@
 2026-04-18 22:22:21,451 INFO src.presentation.app Debug: 0 notes, 0 labels
 2026-04-21 16:31:27,323 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Updating 9ec01e9..0c7e167
 2026-04-21 17:10:25,400 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-04-25 21:34:25,440 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Updating 0c7e167..ec7af74
+2026-04-25 21:35:56,184 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Updating 0c7e167..ec7af74
+2026-04-25 21:46:07,190 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: 
+2026-04-25 21:51:34,022 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-04-25 21:53:51,832 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-04-25 21:57:05,697 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-04-25 21:57:07,980 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-04-25 22:20:25,581 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-04-25 22:22:57,863 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-04-25 22:35:14,501 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-04-25 22:35:34,321 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-04-25 22:38:33,034 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-04-26 00:19:27,558 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-04-26 00:34:57,992 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-04-26 00:34:58,854 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-04-26 00:41:30,014 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-04-26 10:46:22,952 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-04-26 11:28:13,558 INFO src.infrastructure.parsers.obsidian_parser Wrote 56 records to /Users/prodigyduck/git/obsidian/투자/투자.md
+2026-04-26 11:28:20,550 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-04-26 11:29:05,653 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-04-26 17:59:12,197 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-04-26 23:17:38,499 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-01 23:10:42,468 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-01 23:10:55,415 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-01 23:10:59,107 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-01 23:10:59,862 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-04 15:10:05,854 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Updating 777892c..3a9b779
+Fast-forward
+ "\355\210\254\354\236\220/\355\210\254\354\236\220.md" | 1 +
+ 1 file changed, 1 insertion(+)
+2026-05-05 23:22:36,081 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-08 20:46:35,632 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Updating 3a9b779..9d97f0e
+Fast-forward
+ ...3\246\260\355\203\200\354\236\204 \354\225\224\355\230\270.md" | 8 ++++++++
+ "\355\210\254\354\236\220/\355\210\254\354\236\220.md"            | 6 ++++++
+ 2 files changed, 14 insertions(+)
+2026-05-09 17:02:09,613 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-09 17:02:15,567 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-09 17:02:16,349 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-09 17:02:19,549 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-09 17:04:08,327 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Updating 9d97f0e..7d98dca
+Fast-forward
+ "\355\210\254\354\236\220/\355\210\254\354\236\220.md" | 2 ++
+ 1 file changed, 2 insertions(+)
+2026-05-09 17:04:09,190 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-14 19:46:19,216 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Updating 3e49282..3b600ff
+Fast-forward
+ ...53\246\260\355\203\200\354\236\204 \354\225\224\355\230\270.md" | 1 +
+ "\355\210\254\354\236\220/\355\210\254\354\236\220.md"             | 7 ++++++-
+ 2 files changed, 7 insertions(+), 1 deletion(-)
+2026-05-14 19:46:20,048 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-17 10:35:22,762 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Updating 3b600ff..d26219a
+Fast-forward
+ ...\353\246\260\355\203\200\354\236\204 \354\225\224\355\230\270.md" | 4 ++++
+ "\355\210\254\354\236\220/\355\210\254\354\236\220.md"               | 5 ++---
+ 2 files changed, 6 insertions(+), 3 deletions(-)
+2026-05-22 15:51:33,375 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Updating d26219a..31185d1
+Fast-forward
+ "\355\210\254\354\236\220/\355\210\254\354\236\220.md" | 4 ++++
+ 1 file changed, 4 insertions(+)
+2026-05-22 15:51:36,818 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-22 15:51:37,677 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-23 15:19:01,850 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Updating 31185d1..37761d3
+Fast-forward
+ ...4\353\246\260\355\203\200\354\236\204 \354\225\224\355\230\270.md" | 2 ++
+ "\355\210\254\354\236\220/\355\210\254\354\236\220.md"                | 4 +++-
+ 2 files changed, 5 insertions(+), 1 deletion(-)
+2026-05-24 11:35:02,243 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Updating 37761d3..413c8f0
+Fast-forward
+ "\355\210\254\354\236\220/\355\210\254\354\236\220.md" | 1 +
+ 1 file changed, 1 insertion(+)
+2026-05-27 14:49:09,873 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-27 14:49:13,067 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-27 14:49:13,950 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-27 14:49:16,552 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-27 14:49:29,338 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-27 14:49:30,192 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-27 14:49:51,392 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Updating 413c8f0..ead51d1
+Fast-forward
+ ...4\353\246\260\355\203\200\354\236\204 \354\225\224\355\230\270.md" | 1 +
+ "\355\210\254\354\236\220/\355\210\254\354\236\220.md"                | 4 ++++
+ 2 files changed, 5 insertions(+)
+2026-05-27 14:49:52,261 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:15:09,782 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Updating ead51d1..93f2b8a
+Fast-forward
+ "\355\210\254\354\236\220/\355\210\254\354\236\220.md" | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+2026-05-29 23:15:09,782 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Updating ead51d1..93f2b8a
+Fast-forward
+ "\355\210\254\354\236\220/\355\210\254\354\236\220.md" | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+2026-05-29 23:15:10,525 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:15:10,525 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:27:22,651 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:27:22,651 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:29:20,899 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:29:20,899 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:34:12,492 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Updating 93f2b8a..426308a
+Fast-forward
+ "\355\210\254\354\236\220/\355\210\254\354\236\220.md" | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+2026-05-29 23:34:12,492 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Updating 93f2b8a..426308a
+Fast-forward
+ "\355\210\254\354\236\220/\355\210\254\354\236\220.md" | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+2026-05-29 23:36:01,358 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:36:01,358 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:36:13,807 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:36:13,807 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:36:14,488 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:36:14,488 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:36:17,330 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:36:17,330 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:36:18,072 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:36:18,072 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:36:35,374 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:36:35,374 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:36:36,096 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:36:36,096 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:37:52,587 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:37:52,587 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:39:13,113 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-29 23:39:13,113 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-30 08:40:11,215 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-30 08:40:11,215 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-30 08:41:18,306 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-30 08:41:18,306 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-30 08:41:31,047 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-30 08:41:31,047 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-30 08:41:47,464 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-30 08:41:47,464 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-30 08:41:57,878 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-30 08:41:57,878 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-30 08:42:06,535 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-30 08:42:06,535 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-30 08:42:33,704 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-30 08:42:33,704 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-30 08:42:42,218 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-30 08:42:42,218 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-30 16:35:43,882 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.
+2026-05-30 16:35:43,882 INFO src.infrastructure.parsers.obsidian_parser Obsidian git pull: Already up to date.

@@ -117,3 +117,9 @@ npm run audit:fix # 취약성 자동 수정
 
 - Obsidian 데이터는 읽기 전용, 로컬 파일만 사용
 - 인증 없음 — 로컬 전용 도구 (PUT 엔드포인트는 간단한 API key로 보호)
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+at specs/002-account-based-portfolio/plan.md
+<!-- SPECKIT END -->

@@ -92,6 +92,18 @@
         <PortfolioChart :data="lineData" :projections="timePeriod === 'daily' ? projectionsData : []" />
       </v-card>
 
+      <!-- Account Cards -->
+      <v-card v-if="historyStore.history?.accounts && historyStore.history.accounts.length > 0" rounded="lg" variant="flat" class="mb-6 pa-4">
+        <v-card-title class="text-subtitle-1 font-weight-bold px-2">
+          계좌별 현황
+        </v-card-title>
+        <v-row dense>
+          <v-col v-for="account in historyStore.history.accounts" :key="account.name" cols="12" sm="6" md="4">
+            <AccountCard :account="account" />
+          </v-col>
+        </v-row>
+      </v-card>
+
       <!-- Table -->
       <v-card rounded="lg" variant="flat">
         <v-card-title class="text-subtitle-1 font-weight-bold pa-4 pb-0">
@@ -147,6 +159,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useHistoryStore } from '@/stores'
 import PortfolioChart from '@/components/PortfolioChart.vue'
+import AccountCard from '@/components/AccountCard.vue'
 
 const historyStore = useHistoryStore()
 const lastUpdated = ref<string | null>(null)

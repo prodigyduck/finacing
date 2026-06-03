@@ -17,6 +17,27 @@ export interface Projection {
   amount: number
 }
 
+export interface Holding {
+  symbol: string;
+}
+
+export interface Account {
+  name: string;
+  latest_amount: number;
+  allocation: number;
+  holdings: Holding[];
+}
+
+export interface Comparison {
+  best_performer: string;
+  worst_performer: string;
+  allocation_table: Array<{
+    account: string;
+    amount: number;
+    percentage: number;
+  }>;
+}
+
 export interface HistoryResponse {
   records: HistoryRecord[]
   latest: { date: string; amount: number } | null
@@ -25,6 +46,9 @@ export interface HistoryResponse {
   return_rate: number | null
   record_count: number
   projections: Projection[]
+  // New fields for account-based portfolio
+  accounts?: Account[];
+  comparison?: Comparison;
 }
 
 export async function fetchHistory(year?: number): Promise<HistoryResponse> {

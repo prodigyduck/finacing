@@ -1,0 +1,32 @@
+- generic [ref=e4]:
+  - navigation [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Financing
+      - list [ref=e11]:
+        - link "Dashboard" [ref=e12] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e14]: 󰄪
+          - generic [ref=e16]: Dashboard
+        - link "Raw Data" [ref=e17] [cursor=pointer]:
+          - /url: /raw-data
+          - generic [ref=e19]: 󰓰
+          - generic [ref=e21]: Raw Data
+  - main [ref=e22]:
+    - generic [ref=e24]:
+      - generic [ref=e25]:
+        - generic [ref=e26]: Portfolio
+        - generic [ref=e27]: Investment value history from Obsidian
+      - generic [ref=e28]:
+        - button "Git Pull" [ref=e29] [cursor=pointer]:
+          - generic [ref=e30]:
+            - generic [ref=e31]: 󱓎
+            - text: Git Pull
+        - button "Refresh":
+          - generic:
+            - generic: 󰑐
+            - text: Refresh
+          - generic:
+            - progressbar:
+              - img

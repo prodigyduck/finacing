@@ -25,17 +25,15 @@ function fmtLabel(dateStr: string): string {
   // Check if it's a weekly format (e.g., "2026-W15")
   const weekMatch = dateStr.match(/(\d+)-W(\d+)/)
   if (weekMatch) {
-    const year = weekMatch[1]
-    const week = weekMatch[2]
-    return `${year.slice(2)}/${week}주`  // "26/15주"
+    const week = parseInt(weekMatch[2], 10)
+    return `${week}주`  // "15주"
   }
 
   // Check if it's a monthly format (e.g., "2026-05")
   const monthMatch = dateStr.match(/(\d+)-(\d+)/)
   if (monthMatch && monthMatch[1].length === 4) {
-    const year = monthMatch[1]
-    const month = monthMatch[2]
-    return `${year.slice(2)}/${month}월`  // "26/05월"
+    const month = parseInt(monthMatch[2], 10)
+    return `${month}월`  // "5월"
   }
 
   // Daily format (ISO date string)
@@ -151,12 +149,12 @@ function render() {
       axisTick: { show: false },
       axisLabel: {
         fontFamily: 'Inter',
-        fontSize: 9,   // Even smaller
+        fontSize: 11,
         color: '#8E8E93',
-        // Smart interval: show labels based on data density
-        interval: allLabels.length > 100 ? 4 : allLabels.length > 60 ? 2 : 0,
-        // Rotate vertically for very dense data
-        rotate: allLabels.length > 60 ? 90 : allLabels.length > 40 ? 45 : 30,
+        // Daily (dense) -> rotate 45, interval based on length
+        // Weekly/Monthly -> rotate 0, interval auto
+        interval: allLabels.length > 30 ? Math.floor(allLabels.length / 10) : 'auto',
+        rotate: allLabels.length > 30 ? 45 : 0,
         formatter: (value: string) => value,
       },
     },

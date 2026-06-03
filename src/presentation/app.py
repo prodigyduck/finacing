@@ -162,30 +162,6 @@ async def sync_vault():
 async def get_history(year: Optional[int] = None, account: Optional[str] = None):
     try:
         parser.pull()
-
-        # Try parser chain for hybrid format support
-        try:
-            chain = ParserChain([AccountParser(), LegacyParser()])
-            text = (parser.vault_path / parser.investment_file).read_text(encoding="utf-8")
-            snapshots = chain.parse(text, year or datetime.date.today().year)
-
-            if snapshots and snapshots[0].accounts:
-                # Account-based format detected
-                analyze_accounts = AnalyzeAccounts()
-                account_data = analyze_accounts.execute(snapshots[0])
-
-                # Get base history data (for backward compatibility)
-                history = parser.parse(year=year)
-                base_result = analyze_use_case.execute(history)
-
-                # Merge account data into base result
-                base_result.update(account_data)
-                return base_result
-        except (ValueError, FileNotFoundError):
-            # Fall through to legacy parsing
-            pass
-
-        # Legacy format or error - use original parser
         history = parser.parse(year=year)
         return analyze_use_case.execute(history)
 

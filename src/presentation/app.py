@@ -162,6 +162,38 @@ async def sync_vault():
 async def get_history(year: Optional[int] = None, account: Optional[str] = None):
     try:
         parser.pull()
+
+        # Try account-based format first (safer approach)
+        account_based_success = False
+        try:
+            from src.infrastructure.parsers.account_parser import AccountParser
+
+            account_parser = AccountParser()
+            text = (parser.vault_path / parser.investment_file).read_text(encoding="utf-8")
+
+            if account_parser.can_parse(text):
+                snapshots = account_parser.parse(text, year or datetime.date.today().year)
+
+                if snapshots and len(snapshots) > 0:
+                    account_based_success = True
+
+                    # Account-based format detected
+                    analyze_accounts = AnalyzeAccounts()
+                    account_data = analyze_accounts.execute(snapshots[0])
+
+                    # Get base history data (for backward compatibility)
+                    history = parser.parse(year=year)
+                    base_result = analyze_use_case.execute(history)
+
+                    # Merge account data into base result
+                    base_result.update(account_data)
+                    return base_result
+        except Exception as e:
+            # Account-based parsing failed, fall through to legacy
+            import logging
+            logging.warning(f"Account-based parsing failed: {e}, falling back to legacy")
+
+        # Legacy format (default)
         history = parser.parse(year=year)
         return analyze_use_case.execute(history)
 

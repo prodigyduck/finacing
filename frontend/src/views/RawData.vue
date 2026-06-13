@@ -20,10 +20,19 @@
           variant="outlined"
           size="small"
           :loading="rawDataStore.loading"
-          @click="rawDataStore.syncAndFetch()"
+          @click="handleGitPull"
         >
           <v-icon start>mdi-source-branch-sync</v-icon>
           Git Pull
+        </v-btn>
+        <v-btn
+          variant="outlined"
+          size="small"
+          :loading="pushing"
+          @click="handleGitPush"
+        >
+          <v-icon start>mdi-source-branch-push</v-icon>
+          Git Push
         </v-btn>
       </div>
     </div>
@@ -33,8 +42,14 @@
       {{ rawDataStore.error }}
     </v-alert>
 
-    <!-- Table -->
-    <v-card rounded="lg" variant="flat">
+    <!-- Format Tabs -->
+    <v-tabs v-model="activeTab" class="mb-4">
+      <v-tab value="legacy">레거시 형식</v-tab>
+      <v-tab value="account">계좌별 형식</v-tab>
+    </v-tabs>
+
+    <!-- Legacy Format Editor -->
+    <v-card v-if="activeTab === 'legacy'" rounded="lg" variant="flat">
       <v-table density="comfortable">
         <thead>
           <tr>
@@ -86,7 +101,104 @@
           color="primary"
           variant="flat"
           :loading="rawDataStore.saving"
-          @click="handleSave"
+          @click="handleSaveLegacy"
+        >
+          <v-icon start>mdi-content-save</v-icon>
+          저장
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+
+    <!-- Account Format Editor -->
+    <v-card v-if="activeTab === 'account'" rounded="lg" variant="flat" class="pa-4">
+      <v-card-title class="text-subtitle-1 font-weight-bold px-0">
+        계좌별 기록
+      </v-card-title>
+
+      <!-- Date Input -->
+      <v-row dense class="mb-4">
+        <v-col cols="12" sm="4">
+          <v-text-field
+            v-model="accountDate"
+            label="날짜 (YYYY-MM-DD)"
+            type="date"
+            density="compact"
+            variant="outlined"
+            hide-details
+          />
+        </v-col>
+      </v-row>
+
+      <!-- Account Cards -->
+      <div v-for="(account, accIdx) in accountRows" :key="accIdx" class="mb-4">
+        <v-card rounded="lg" variant="outlined" class="pa-4">
+          <div class="d-flex justify-space-between align-center mb-3">
+            <v-text-field
+              v-model="account.name"
+              label="계좌명"
+              density="compact"
+              variant="outlined"
+              hide-details
+              style="max-width: 200px;"
+            />
+            <v-btn icon size="small" variant="text" color="error" @click="removeAccount(accIdx)">
+              <v-icon>mdi-delete</v-icon>
+            </v-btn>
+          </div>
+
+          <v-row dense class="mb-3">
+            <v-col cols="12" sm="6">
+              <v-text-field
+                v-model="account.amount"
+                label="총액 (억)"
+                type="number"
+                density="compact"
+                variant="outlined"
+                hide-details
+                placeholder="0.00"
+              />
+            </v-col>
+          </v-row>
+
+          <div class="mb-2 text-caption text-medium-emphasis">보유종목</div>
+          <v-row dense>
+            <v-col v-for="(holding, hIdx) in account.holdings" :key="hIdx" cols="12" sm="6">
+              <div class="d-flex align-center ga-2">
+                <v-text-field
+                  v-model="holding.symbol"
+                  label="종목명"
+                  density="compact"
+                  variant="outlined"
+                  hide-details
+                  style="flex: 1;"
+                />
+                <v-btn icon size="x-small" variant="text" color="error" @click="removeHolding(accIdx, hIdx)">
+                  <v-icon>mdi-delete</v-icon>
+                </v-btn>
+              </div>
+            </v-col>
+            <v-col cols="12">
+              <v-btn variant="text" size="small" prepend-icon="mdi-plus" @click="addHolding(accIdx)">
+                종목 추가
+              </v-btn>
+            </v-col>
+          </v-row>
+        </v-card>
+      </div>
+
+      <v-btn variant="text" prepend-icon="mdi-plus" @click="addAccount" class="mb-4">
+        계좌 추가
+      </v-btn>
+
+      <v-divider class="my-4" />
+
+      <v-card-actions class="pa-0">
+        <v-spacer />
+        <v-btn
+          color="primary"
+          variant="flat"
+          :loading="rawDataStore.saving"
+          @click="handleSaveAccount"
         >
           <v-icon start>mdi-content-save</v-icon>
           저장
@@ -96,7 +208,7 @@
 
     <!-- Empty State -->
     <v-card
-      v-if="!rawDataStore.loading && rows.length === 0"
+      v-if="!rawDataStore.loading && rows.length === 0 && accountRows.length === 0"
       rounded="lg"
       variant="flat"
       class="py-12 text-center"
@@ -117,6 +229,7 @@ import { ref, reactive, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRawDataStore } from '@/stores'
 import type { RawRecord } from '@/api'
+import axios from 'axios'
 
 const router = useRouter()
 
@@ -128,6 +241,16 @@ interface Row {
   dateError: boolean
 }
 
+interface Holding {
+  symbol: string
+}
+
+interface AccountRow {
+  name: string
+  amount: string
+  holdings: Holding[]
+}
+
 const rawDataStore = useRawDataStore()
 
 const currentYear = new Date().getFullYear()
@@ -135,6 +258,10 @@ const selectedYear = ref(currentYear)
 const yearOptions = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1]
 
 const rows = reactive<Row[]>([])
+const accountRows = reactive<AccountRow[]>([])
+const accountDate = ref(new Date().toISOString().split('T')[0])
+const activeTab = ref<'legacy' | 'account'>('legacy')
+const pushing = ref(false)
 
 const snackbar = ref(false)
 const snackbarText = ref('')
@@ -159,11 +286,69 @@ watch(() => rawDataStore.records, syncFromStore, { deep: true })
 onMounted(async () => {
   await rawDataStore.fetchRawData(selectedYear.value)
   syncFromStore()
+
+  // Load existing account data for today
+  await loadAccountData()
 })
 
 async function onYearChange(year: number) {
   await rawDataStore.fetchRawData(year)
   syncFromStore()
+}
+
+async function loadAccountData() {
+  try {
+    const response = await axios.get('/api/v1/account-data', {
+      params: { date: accountDate.value }
+    })
+
+    if (response.data.accounts && response.data.accounts.length > 0) {
+      // Convert API response to accountRows format
+      accountRows.splice(0, accountRows.length,
+        ...response.data.accounts.map((acc: any) => ({
+          name: acc.name,
+          amount: acc.amount,
+          holdings: (acc.holdings || []).map((h: string) => ({ symbol: h }))
+        }))
+      )
+    }
+  } catch (e: unknown) {
+    // No existing data for this date, that's ok
+    console.log('No existing account data for this date')
+  }
+}
+
+// Watch account date change to reload data
+watch(accountDate, () => {
+  loadAccountData()
+})
+
+async function handleGitPull() {
+  await rawDataStore.syncAndFetch()
+  snackbarText.value = 'Git Pull 완료'
+  snackbarColor.value = 'success'
+  snackbar.value = true
+}
+
+async function handleGitPush() {
+  pushing.value = true
+  try {
+    await axios.post('/api/v1/sync', {}, {
+      headers: {
+        'X-API-Key': 'local-dev-only'
+      }
+    })
+    snackbarText.value = 'Git Push 완료'
+    snackbarColor.value = 'success'
+    snackbar.value = true
+  } catch (e: unknown) {
+    const err = e as { response?: { data?: { detail?: string } }; message?: string }
+    snackbarText.value = err?.response?.data?.detail || err?.message || 'Git Push 실패'
+    snackbarColor.value = 'error'
+    snackbar.value = true
+  } finally {
+    pushing.value = false
+  }
 }
 
 function parseDate(idx: number) {
@@ -197,7 +382,7 @@ function removeRow(idx: number) {
   rows.splice(idx, 1)
 }
 
-async function handleSave() {
+async function handleSaveLegacy() {
   // Sync display → month/day
   for (const r of rows) {
     const parts = r.display.split('.')
@@ -236,10 +421,117 @@ async function handleSave() {
     snackbarColor.value = 'success'
     snackbar.value = true
 
-    // Auto-redirect to Dashboard after successful save
     setTimeout(() => {
       router.push('/')
     }, 1500)
+  }
+}
+
+// Account format functions
+function addAccount() {
+  accountRows.push({
+    name: '',
+    amount: '',
+    holdings: []
+  })
+}
+
+function removeAccount(idx: number) {
+  accountRows.splice(idx, 1)
+}
+
+function addHolding(accIdx: number) {
+  accountRows[accIdx].holdings.push({ symbol: '' })
+}
+
+function removeHolding(accIdx: number, hIdx: number) {
+  accountRows[accIdx].holdings.splice(hIdx, 1)
+}
+
+async function handleSaveAccount() {
+  // Validate
+  if (!accountDate.value) {
+    snackbarText.value = '날짜를 선택해주세요'
+    snackbarColor.value = 'error'
+    snackbar.value = true
+    return
+  }
+
+  for (const acc of accountRows) {
+    if (!acc.name) {
+      snackbarText.value = '계좌명을 입력해주세요'
+      snackbarColor.value = 'error'
+      snackbar.value = true
+      return
+    }
+    if (!acc.amount || isNaN(parseFloat(acc.amount))) {
+      snackbarText.value = `${acc.name || '(계좌)'}의 금액을 확인해주세요`
+      snackbarColor.value = 'error'
+      snackbar.value = true
+      return
+    }
+  }
+
+  // Convert account data to markdown
+  const date = new Date(accountDate.value)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const dateStr = `${year}-${month}-${day}`
+
+  let markdown = `\n## ${dateStr}\n\n`
+
+  for (const acc of accountRows) {
+    markdown += `### 계좌: ${acc.name}\n`
+    markdown += `총액: ${parseFloat(acc.amount).toFixed(2)}억\n`
+    if (acc.holdings.length > 0) {
+      const symbols = acc.holdings.map(h => h.symbol).filter(s => s).join(', ')
+      if (symbols) {
+        markdown += `보유종목: ${symbols}\n`
+      } else {
+        markdown += `보유종목:\n`
+      }
+    } else {
+      markdown += `보유종목:\n`
+    }
+    markdown += '\n'
+  }
+
+  // Save via API
+  rawDataStore.saving = true
+  try {
+    const response = await axios.post('/api/v1/account-data', {
+      date: dateStr,
+      accounts: accountRows.map(acc => ({
+        name: acc.name,
+        amount: acc.amount,
+        holdings: acc.holdings.map(h => h.symbol).filter(s => s)
+      }))
+    }, {
+      headers: {
+        'X-API-Key': 'local-dev-only'
+      }
+    })
+
+    snackbarText.value = `${response.data.account_count}개 계좌 기록을 저장했어요`
+    snackbarColor.value = 'success'
+    snackbar.value = true
+
+    // Clear form
+    accountRows.splice(0, accountRows.length)
+    accountDate.value = new Date().toISOString().split('T')[0]
+
+    // Redirect to Dashboard after successful save
+    setTimeout(() => {
+      router.push('/')
+    }, 1500)
+  } catch (e: unknown) {
+    const err = e as { response?: { data?: { detail?: string } }; message?: string }
+    snackbarText.value = err?.response?.data?.detail || err?.message || '저장 실패'
+    snackbarColor.value = 'error'
+    snackbar.value = true
+  } finally {
+    rawDataStore.saving = false
   }
 }
 </script>

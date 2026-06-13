@@ -38,6 +38,15 @@ export interface Comparison {
   }>;
 }
 
+export interface AccountHistory {
+  dates: string[];
+  series: Array<{
+    name: string;
+    data: number[];
+    color: string;
+  }>;
+}
+
 export interface HistoryResponse {
   records: HistoryRecord[]
   latest: { date: string; amount: number } | null
@@ -49,6 +58,7 @@ export interface HistoryResponse {
   // New fields for account-based portfolio
   accounts?: Account[];
   comparison?: Comparison;
+  account_history?: AccountHistory;
 }
 
 export async function fetchHistory(year?: number): Promise<HistoryResponse> {

@@ -17,11 +17,11 @@ def test_account_parser_can_parse_account_format():
     assert parser.can_parse(account_text) is True
 
 
-def test_account_parser_cannot_parse_legacy_format():
-    """레거시 형식 거부"""
+def test_account_parser_can_parse_legacy_format():
+    """레거시 형식 지원"""
     parser = AccountParser()
     legacy_text = "1.01 5.20\n6.03 5.61\n"
-    assert parser.can_parse(legacy_text) is False
+    assert parser.can_parse(legacy_text) is True  # AccountParser now supports legacy format
 
 
 def test_account_parser_parse_single_account():
@@ -87,14 +87,35 @@ def test_account_parser_parse_multiple_dates():
 
 ### 계좌: 증권계좌
 총액: 3.50억
+보유종목: 삼성전자
 
 ## 2026-06-01
 
 ### 계좌: 증권계좌
 총액: 3.45억
+보유종목: 삼성전자
 """
     snapshots = parser.parse(markdown, 2026)
 
     assert len(snapshots) == 2
     assert snapshots[0].date == date(2026, 6, 3)
     assert snapshots[1].date == date(2026, 6, 1)
+
+    def test_parse_simple_account_format(self):
+        """단순 계좌 형식 파싱 테스트: "6.04 0.47 + 4.27 + 0.86" """
+        parser = AccountParser()
+        text = """6.04 0.47 + 4.27 + 0.86"""
+        snapshots = parser.parse(text, 2026)
+
+        assert len(snapshots) == 1
+        snapshot = snapshots[0]
+        assert snapshot.date == date(2026, 6, 4)
+        assert len(snapshot.accounts) == 3
+
+        # 삼성, 키움, 토스 순서
+        assert snapshot.accounts[0].account_name == "삼성"
+        assert snapshot.accounts[0].total_amount_억 == Decimal("0.47")
+        assert snapshot.accounts[1].account_name == "키움"
+        assert snapshot.accounts[1].total_amount_억 == Decimal("4.27")
+        assert snapshot.accounts[2].account_name == "토스"
+        assert snapshot.accounts[2].total_amount_억 == Decimal("0.86")

@@ -104,6 +104,24 @@
         </v-row>
       </v-card>
 
+      <!-- Account Chart -->
+      <v-card v-if="historyStore.history?.accounts && historyStore.history.accounts.length > 0" rounded="lg" variant="flat" class="mb-6 pa-4">
+        <AccountChart
+          :accounts="historyStore.history.accounts"
+          :account-history="historyStore.history.account_history"
+        />
+      </v-card>
+
+      <!-- Comparison and Allocation -->
+      <v-row v-if="historyStore.history?.comparison" dense class="mb-6">
+        <v-col cols="12" md="8">
+          <ComparisonTable :comparison="historyStore.history.comparison" />
+        </v-col>
+        <v-col cols="12" md="4">
+          <AllocationChart :allocations="historyStore.history.comparison.allocation_table" />
+        </v-col>
+      </v-row>
+
       <!-- Table -->
       <v-card rounded="lg" variant="flat">
         <v-card-title class="text-subtitle-1 font-weight-bold pa-4 pb-0">
@@ -160,6 +178,9 @@ import { ref, computed, onMounted } from 'vue'
 import { useHistoryStore } from '@/stores'
 import PortfolioChart from '@/components/PortfolioChart.vue'
 import AccountCard from '@/components/AccountCard.vue'
+import AccountChart from '@/components/AccountChart.vue'
+import ComparisonTable from '@/components/ComparisonTable.vue'
+import AllocationChart from '@/components/AllocationChart.vue'
 
 const historyStore = useHistoryStore()
 const lastUpdated = ref<string | null>(null)

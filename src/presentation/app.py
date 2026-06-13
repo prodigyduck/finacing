@@ -125,6 +125,33 @@ class RawDataRequest(BaseModel):
     records: list[RawRecord]
 
 
+class AccountRecordRequest(BaseModel):
+    """계좌별 형식 저장 요청"""
+    date: str  # YYYY-MM-DD
+    accounts: list[dict]  # List of {name: str, amount: str, holdings: list[str]}
+
+    @field_validator("date")
+    @classmethod
+    def validate_date(cls, v: str) -> str:
+        from datetime import datetime
+
+        try:
+            datetime.strptime(v, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError("date must be in YYYY-MM-DD format")
+        return v
+
+    @field_validator("accounts")
+    @classmethod
+    def validate_accounts(cls, v: list) -> list:
+        for acc in v:
+            if not acc.get("name"):
+                raise ValueError("account name is required")
+            if not acc.get("amount"):
+                raise ValueError("account amount is required")
+        return v
+
+
 class RootResponse(TypedDict):
     message: str
     version: str
@@ -163,39 +190,36 @@ async def get_history(year: Optional[int] = None, account: Optional[str] = None)
     try:
         parser.pull()
 
-        # Try account-based format first (safer approach)
-        account_based_success = False
-        try:
-            from src.infrastructure.parsers.account_parser import AccountParser
+        # Use AccountParser (supports both account-based and legacy formats)
+        account_parser = AccountParser()
+        text = (parser.vault_path / parser.investment_file).read_text(encoding="utf-8")
 
-            account_parser = AccountParser()
-            text = (parser.vault_path / parser.investment_file).read_text(encoding="utf-8")
+        if not account_parser.can_parse(text):
+            raise ValueError("투자.md 파일 형식을 확인하세요 (M.DD 억 형식 또는 계좌별 형식)")
 
-            if account_parser.can_parse(text):
-                snapshots = account_parser.parse(text, year or datetime.date.today().year)
+        snapshots = account_parser.parse(text, year or datetime.date.today().year)
 
-                if snapshots and len(snapshots) > 0:
-                    account_based_success = True
+        if not snapshots or len(snapshots) == 0:
+            raise ValueError(f"{year or datetime.date.today().year}년 데이터를 찾을 수 없습니다")
 
-                    # Account-based format detected
-                    analyze_accounts = AnalyzeAccounts()
-                    account_data = analyze_accounts.execute(snapshots[0])
+        # Get the latest snapshot (most recent date)
+        latest_snapshot = snapshots[-1]
 
-                    # Get base history data (for backward compatibility)
-                    history = parser.parse(year=year)
-                    base_result = analyze_use_case.execute(history)
+        # Analyze account data
+        analyze_accounts = AnalyzeAccounts()
+        account_data = analyze_accounts.execute(latest_snapshot)
 
-                    # Merge account data into base result
-                    base_result.update(account_data)
-                    return base_result
-        except Exception as e:
-            # Account-based parsing failed, fall through to legacy
-            import logging
-            logging.warning(f"Account-based parsing failed: {e}, falling back to legacy")
+        # Generate account history from all snapshots
+        account_history = _generate_account_history(snapshots)
 
-        # Legacy format (default)
+        # For backward compatibility, also generate history data
         history = parser.parse(year=year)
-        return analyze_use_case.execute(history)
+        base_result = analyze_use_case.execute(history)
+
+        # Merge account data and history into base result
+        base_result.update(account_data)
+        base_result["account_history"] = account_history
+        return base_result
 
     except FileNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
@@ -204,6 +228,55 @@ async def get_history(year: Optional[int] = None, account: Optional[str] = None)
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to parse investment data: {str(e)}",
         ) from e
+
+
+def _generate_account_history(snapshots: list) -> dict:
+    """스냅샷 리스트에서 계좌별 시계열 데이터 생성 (6월 이후만, 총계좌 제외)"""
+    from collections import defaultdict
+
+    # 6월 이후의 스냅샷만 필터링
+    filtered_snapshots = [s for s in snapshots if s.date.month >= 6]
+
+    if not filtered_snapshots:
+        # 6월 데이터가 없으면 빈 결과 반환
+        return {"dates": [], "series": []}
+
+    # 모든 계좌명 수집 (총계좌 제외)
+    all_accounts = set()
+    for snapshot in filtered_snapshots:
+        for acc in snapshot.accounts:
+            if acc.account_name != "총계좌":  # 총계좌는 제외
+                all_accounts.add(acc.account_name)
+
+    # 날짜별 계좌 데이터 수집
+    account_series = defaultdict(list)
+    dates = []
+
+    for snapshot in filtered_snapshots:
+        date_str = snapshot.date.strftime("%Y-%m-%d")
+        dates.append(date_str)
+
+        # 각 계좌의 금액 수집 (총계좌 제외)
+        account_map = {acc.account_name: acc.total_amount_억 for acc in snapshot.accounts if acc.account_name != "총계좌"}
+        for acc_name in all_accounts:
+            amount = float(account_map.get(acc_name, 0))
+            account_series[acc_name].append(amount)
+
+    # ECharts용 데이터 구조로 변환
+    result = {
+        "dates": dates,
+        "series": []
+    }
+
+    colors = ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#6b7280"]
+    for i, (acc_name, values) in enumerate(sorted(account_series.items())):
+        result["series"].append({
+            "name": acc_name,
+            "data": values,
+            "color": colors[i % len(colors)]
+        })
+
+    return result
 
 
 @app.get("/api/v1/raw-data")
@@ -248,6 +321,163 @@ async def put_raw_data(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to save raw data: {str(e)}",
+        ) from e
+
+
+@app.post("/api/v1/account-data")
+async def save_account_data(
+    request: AccountRecordRequest,
+    commit: bool = Query(default=True, description="Git commit 여부"),
+    x_api_key: str = Header(...),
+):
+    """계좌별 형식 데이터 저장 (기존 날짜가 있으면 교체)"""
+    # Verify API key
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid API key")
+
+    try:
+        file_path = parser.vault_path / parser.investment_file
+        current_content = file_path.read_text(encoding="utf-8")
+        lines = current_content.splitlines()
+
+        # 기존 날짜 섹션 찾기 및 제거
+        date_header = f"## {request.date}"
+        filtered_lines = []
+        skip_until_next_date = False
+
+        for i, line in enumerate(lines):
+            # 날짜 헤더 확인
+            if line.startswith("## ") and line.strip() == date_header:
+                skip_until_next_date = True
+                continue
+
+            # 다음 날짜 헤더를 만나면 skip 중단
+            if skip_until_next_date and line.startswith("## "):
+                skip_until_next_date = False
+
+            # skip 중이 아니면 추가
+            if not skip_until_next_date:
+                filtered_lines.append(line)
+
+        # Build account markdown
+        account_markdown = [f"\n{date_header}", ""]
+        for acc in request.accounts:
+            account_markdown.append(f"### 계좌: {acc['name']}")
+            account_markdown.append(f"총액: {acc['amount']}억")
+            holdings = acc.get("holdings", [])
+            if holdings and any(h.strip() for h in holdings):
+                account_markdown.append(f"보유종목: {', '.join(holdings)}")
+            else:
+                account_markdown.append("보유종목:")
+            account_markdown.append("")
+
+        # Combine and write
+        updated_content = "\n".join(filtered_lines + account_markdown)
+        file_path.write_text(updated_content, encoding="utf-8")
+
+        # Git commit if requested
+        commit_hash = None
+        if commit:
+            commit_hash = parser.commit(
+                f"Update account data for {request.date} ({len(request.accounts)} accounts)"
+            )
+
+        return {
+            "status": "saved",
+            "date": request.date,
+            "account_count": len(request.accounts),
+            "commit": commit_hash
+        }
+
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to save account data: {str(e)}",
+        ) from e
+
+
+@app.get("/api/v1/account-data")
+async def get_account_data(date: str = Query(..., description="날짜 (YYYY-MM-DD)")):
+    """특정 날짜의 계좌 데이터 조회"""
+    try:
+        file_path = parser.vault_path / parser.investment_file
+        content = file_path.read_text(encoding="utf-8")
+
+        # 해당 날짜의 계좌 데이터 찾기
+        date_header = f"## {date}"
+        lines = content.splitlines()
+
+        accounts = []
+        in_target_section = False
+        current_account = None
+
+        for line in lines:
+            # 날짜 헤더 확인
+            if line.startswith("## ") and line.strip() == date_header:
+                in_target_section = True
+                continue
+
+            # 다른 날짜 헤더를 만나면 중단
+            if in_target_section and line.startswith("## ") and line.strip() != date_header:
+                break
+
+            # 계좌 헤더 확인
+            if in_target_section and line.startswith("### 계좌:"):
+                if current_account:
+                    accounts.append(current_account)
+                current_account = {"name": line.split(":", 1)[1].strip(), "amount": "", "holdings": []}
+                continue
+
+            # 총액 확인
+            if in_target_section and current_account and "총액:" in line:
+                current_account["amount"] = line.split(":", 1)[1].strip().replace("억", "")
+                continue
+
+            # 보유종목 확인
+            if in_target_section and current_account and "보유종목:" in line:
+                holdings_str = line.split(":", 1)[1].strip()
+                if holdings_str:
+                    current_account["holdings"] = [h.strip() for h in holdings_str.split(",")]
+                else:
+                    current_account["holdings"] = []
+                continue
+
+        # 마지막 계좌 추가
+        if current_account:
+            accounts.append(current_account)
+
+        return {"date": date, "accounts": accounts}
+
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to load account data: {str(e)}",
+        ) from e
+
+        # Git commit if requested
+        commit_hash = None
+        if commit:
+            commit_hash = parser.commit(
+                f"Update account data for {request.date} ({len(request.accounts)} accounts)"
+            )
+
+        return {
+            "status": "saved",
+            "date": request.date,
+            "account_count": len(request.accounts),
+            "commit": commit_hash
+        }
+
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to save account data: {str(e)}",
         ) from e
 
 
